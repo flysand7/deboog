@@ -1,0 +1,9 @@
+
+# The main executable
+/bubug
+
+# Intermediate and other binary files
+*.o
+*.a
+*.elf
+*.bin
