@@ -615,22 +615,22 @@ fmt_mxcsr_mask :: proc(cpu: ^CPU, desc: ^Register_Desc, value: Register_Value, a
 fmt_fsw :: proc(cpu: ^CPU, desc: ^Register_Desc, value: Register_Value, allocator: mem.Allocator) -> string {
     bits := value.(u16)
     fsw := transmute(X86_FSW) bits
-    IE   := .IE   in fsw? 0 : 1
-    DE   := .DE   in fsw? 0 : 1
-    ZE   := .ZE   in fsw? 0 : 1
-    OE   := .OE   in fsw? 0 : 1
-    UE   := .UE   in fsw? 0 : 1
-    PE   := .PE   in fsw? 0 : 1
-    SF   := .SF   in fsw? 0 : 1
-    ES   := .ES   in fsw? 0 : 1
-    C0   := .C0   in fsw? 0 : 1
-    C1   := .C1   in fsw? 0 : 2
-    C2   := .C2   in fsw? 0 : 4
-    TOP0 := .TOP0 in fsw? 0 : 1
-    TOP1 := .TOP1 in fsw? 0 : 2
-    TOP2 := .TOP2 in fsw? 0 : 4
-    C3   := .C3   in fsw? 0 : 8
-    B    := .B    in fsw? 0 : 1
+    IE   := .IE   in fsw? 1 : 0
+    DE   := .DE   in fsw? 1 : 0
+    ZE   := .ZE   in fsw? 1 : 0
+    OE   := .OE   in fsw? 1 : 0
+    UE   := .UE   in fsw? 1 : 0
+    PE   := .PE   in fsw? 1 : 0
+    SF   := .SF   in fsw? 1 : 0
+    ES   := .ES   in fsw? 1 : 0
+    C0   := .C0   in fsw? 1 : 0
+    C1   := .C1   in fsw? 2 : 0
+    C2   := .C2   in fsw? 4 : 0
+    TOP0 := .TOP0 in fsw? 1 : 0
+    TOP1 := .TOP1 in fsw? 2 : 0
+    TOP2 := .TOP2 in fsw? 4 : 0
+    C3   := .C3   in fsw? 8 : 0
+    B    := .B    in fsw? 1 : 0
     CODE := C0 | C1 | C2 | C3
     TOP  := TOP0 | TOP1 | TOP2
     return fmt.aprintf("B TOP CODE ESPUOZDI\n%b %03b %04b %b%b%b%b%b%b%b%b",
@@ -640,17 +640,17 @@ fmt_fsw :: proc(cpu: ^CPU, desc: ^Register_Desc, value: Register_Value, allocato
 fmt_fcw :: proc(cpu: ^CPU, desc: ^Register_Desc, value: Register_Value, allocator: mem.Allocator) -> string {
     bits := value.(u16)
     fcw := transmute(X86_FCW) bits
-    IM  := .IM  in fcw? 0 : 1
-    DM  := .DM  in fcw? 0 : 1
-    ZM  := .ZM  in fcw? 0 : 1
-    OM  := .OM  in fcw? 0 : 1
-    UM  := .UM  in fcw? 0 : 1
-    PM  := .PM  in fcw? 0 : 1
-    PC0 := .PC0 in fcw? 0 : 1
-    PC1 := .PC1 in fcw? 0 : 2
-    RC0 := .RC0 in fcw? 0 : 1
-    RC1 := .RC1 in fcw? 0 : 2
-    X   := .X   in fcw? 0 : 1
+    IM  := .IM  in fcw? 1 : 0
+    DM  := .DM  in fcw? 1 : 0
+    ZM  := .ZM  in fcw? 1 : 0
+    OM  := .OM  in fcw? 1 : 0
+    UM  := .UM  in fcw? 1 : 0
+    PM  := .PM  in fcw? 1 : 0
+    PC0 := .PC0 in fcw? 1 : 0
+    PC1 := .PC1 in fcw? 2 : 0
+    RC0 := .RC0 in fcw? 1 : 0
+    RC1 := .RC1 in fcw? 2 : 0
+    X   := .X   in fcw? 1 : 0
     PC  := PC0 | PC1
     RC  := RC0 | RC1
     return fmt.aprintf("X RC PC PUOZDI\n%b %02b %02b %b%b%b%b%b%b",
