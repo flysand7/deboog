@@ -105,15 +105,15 @@ Register_Value :: union {
 */
 MAX_REGISTER_BUFFERS :: _ARCH_MAX_REGISTER_BUFFERS
 
-/*
-    Architecture-dependent registers struct
-*/
-register_sets := _arch_registers
-
-query_register_info_by_name :: proc (name: string) -> (^Register_Set, ^Register_Desc, int, Error) {
+query_register_info_by_name :: proc (cpu: ^CPU, name: string) -> (^Register_Set, ^Register_Desc, int, Error) {
     found_set: ^Register_Set = nil
     found_reg: ^Register_Desc = nil
     found_idx: int = 0
+    register_sets: []Register_Set
+    #partial switch cpu.arch {
+        case .X86: register_sets = x86_registers
+        case: unimplemented()
+    }
     all: for &set in register_sets {
         for &reg, idx in set.regs {
             if reg.name == name {
@@ -202,12 +202,15 @@ _query_register_value_by_index :: proc(save_buf: []u8, buffers: [][]u8,
     return value, .None
 }
 
-query_register_value_by_name :: proc(save_buf: []u8, name: string) -> (Register_Value, ^Register_Desc, Error) {
+query_register_value_by_name :: proc(cpu: ^CPU, save_buf: []u8, name: string) -> (Register_Value, ^Register_Desc, Error) {
     // Get the list of buffers
     reg_buffers: [MAX_REGISTER_BUFFERS][]u8
-    _arch_get_buffers(save_buf, reg_buffers[:])
+    #partial switch cpu.arch {
+        case .X86: x86_get_buffers(cpu, save_buf, reg_buffers[:])
+        case: unimplemented()
+    }
     // Get the register info
-    set, reg, idx, err := query_register_info_by_name(name)
+    set, reg, idx, err := query_register_info_by_name(cpu, name)
     if err != .None {
         return nil, nil, err
     }

@@ -371,7 +371,7 @@ x86_avx512_opmask_set := Register_Set {
     regs = x86_avx512_opmask_regs,
 }
 
-_arch_registers := []Register_Set {
+x86_registers := []Register_Set {
     x86_gp_set,
     x86_misc_set,
     x86_seg_set,
@@ -386,10 +386,10 @@ _arch_registers := []Register_Set {
     x86_avx512_opmask_set,
 }
 
-_arch_get_buffers :: proc(save_buffer: []u8, reg_buffers: [][]u8) {
+x86_get_buffers :: proc(cpu: ^CPU, save_buffer: []u8, reg_buffers: [][]u8) {
     assert(len(reg_buffers) >= _ARCH_MAX_REGISTER_BUFFERS)
     // Assume standard XSAVE format
-    if .OSXSAVE not_in x86_features {
+    if cpu_has_feature(cpu, X86_FEATURE_OSXSAVE) {
         reg_buffers[X86_FPU_BUFFER] = save_buffer[0:0xa0]
         reg_buffers[X86_SSE_BUFFER] = save_buffer[0xa0:0x120]
         return
@@ -412,45 +412,60 @@ _arch_get_buffers :: proc(save_buffer: []u8, reg_buffers: [][]u8) {
     }
 }
 
-@(init)
-_arch_init_register_sets :: proc() {
-    x86_init_features()
-    if .FPU_Supported not_in x86_features {
-        x86_fpu_set.flags &= ~{.Available}
-        x86_fpu_misc_set.flags &= ~{.Available}
+x86_init_registers :: proc(cpu: ^CPU) {
+    impl_state := cast(^X86_CPU_Impl_State) cpu._impl_state
+    xsave_scs  := impl_state.xsave_state_components
+    for &set in x86_registers {
+        set.flags &= ~{.Available}
+        for &reg in set.regs {
+            reg.flags &= ~{.Available, .Shadow}
+        }
     }
-    if .MMX_Supported not_in x86_features {
-        x86_mmx_set.flags &= ~{.Available}
+    // TODO(flysand): Compacted XSAVE format
+    if cpu_has_feature(cpu, X86_FEATURE_FPU) && .Present in xsave_scs[.X87].flags {
+        x86_fpu_set.flags |= {.Available}
+        x86_fpu_misc_set.flags |= {.Available}
     }
-    if .SSE_Supported not_in x86_features {
-        x86_sse_set.flags &= ~{.Available}
+    if cpu_has_feature(cpu, X86_FEATURE_MMX) && .Present in xsave_scs[.X87].flags {
+        x86_mmx_set.flags |= {.Available}
     }
-    if .AVX_Supported not_in x86_features {
-        x86_avx_set.flags &= ~{.Available}
+    if cpu_has_feature(cpu, X86_FEATURE_SSE) && .Present in xsave_scs[.SSE].flags {
+        x86_sse_set.flags |= {.Available}
     }
-    if .MPX_Supported not_in x86_features {
-        x86_mpx_set.flags &= ~{.Available}
+    if cpu_has_feature(cpu, X86_FEATURE_AVX) && .Present in xsave_scs[.AVX].flags {
+        x86_avx_set.flags |= {.Available}
     }
-    if .AVX512_Supported not_in x86_features {
-        x86_avx512_set.flags &= ~{.Available}
-        x86_avx512_opmask_set.flags &= ~{.Available}
+    if cpu_has_feature(cpu, X86_FEATURE_MPX) {
+        if .Present in xsave_scs[.MPX_BND].flags &&
+           .Present in xsave_scs[.MPX_CFG].flags
+       {
+            x86_mpx_set.flags |= {.Available}
+        }
+    }
+    if cpu_has_feature(cpu, X86_FEATURE_AVX512_F) {
+        if .Present in xsave_scs[.AVX512_OP].flags &&
+           .Present in xsave_scs[.AVX512_LO16].flags &&
+           .Present in xsave_scs[.AVX512_HI16].flags
+        {
+            x86_avx512_set.flags |= {.Available}
+            x86_avx512_opmask_set.flags |= {.Available}
+        }
     }
     for reg in &x86_gp_set.regs {
         if reg.size == 8 {
-            reg.flags |= {.Shadow}
+            reg.flags |= {.Shadow, .Available}
         } else if reg.size == 16 {
-            reg.flags |= {.Shadow}
+            reg.flags |= {.Shadow, .Available}
         } else if reg.size == 32 {
-            if x86_bits > 32 {
-                reg.flags |= {.Shadow}
-            } else if x86_bits < 16 {
-                reg.flags &= ~{.Available}
+            if cpu.bits > 32 {
+                reg.flags |= {.Shadow, .Available}
+            }
+            if cpu.bits >= 16 {
+                reg.flags |= {.Available}
             }
         }
-        if reg.size == 64 {
-            if x86_bits < 64 {
-                reg.flags &= ~{.Available}
-            }
+        if reg.size == 64 && cpu.bits == 64{
+            reg.flags |= {.Available}
         }
     }
     for reg in &x86_misc_set.regs {
@@ -458,21 +473,17 @@ _arch_init_register_sets :: proc() {
             reg.flags |= {.Special}
         }
         if reg.size == 16 {
-            reg.flags |= {.Shadow}
+            reg.flags |= {.Shadow, .Available}
         } else if reg.size == 32 {
-            if x86_bits > 32 {
-                reg.flags |= {.Shadow}
-            } else if x86_bits < 16 {
-                reg.flags &= ~{.Available}
+            if cpu.bits > 32 {
+                reg.flags |= {.Shadow, .Available}
             }
-        } else if reg.size == 64 {
-            if x86_bits < 64 {
-                
+            if cpu.bits >= 16 {
+                reg.flags |= {.Available}
             }
+        } else if reg.size == 64 && cpu.bits == 64 {
+            reg.flags |= {.Available}
         }
-    }
-    for reg in &x86_sse_misc_set.regs {
-        reg.flags |= {.Special}
     }
     for reg in &x86_fpu_misc_set.regs {
         _ = reg
