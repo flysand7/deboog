@@ -1,6 +1,9 @@
 
 package arch
 
+import "core:mem"
+import "core:fmt"
+
 Error :: enum {
     None,
     
@@ -58,6 +61,7 @@ Register_Desc :: struct {
     size:      int,
     offset:    int,
     flags:     Register_Flags,
+    formatter: proc(cpu: ^CPU, desc: ^Register_Desc, value: Register_Value, allocator: mem.Allocator) -> string,
 }
 
 /*
@@ -86,8 +90,8 @@ Register_Flags_Bits :: enum {
 u80  :: distinct u128
 
 // TODO(flysand): Endianness-dependent storage
-u256 :: struct { hi: u128, lo: u128 }
-u512 :: struct { hi: u256, lo: u256 }
+u256 :: struct { lo: u128, hi: u128 }
+u512 :: struct { lo: u256, hi: u256 }
 
 Register_Value :: union {
     u8,
@@ -202,7 +206,7 @@ _query_register_value_by_index :: proc(save_buf: []u8, buffers: [][]u8,
     return value, .None
 }
 
-query_register_value_by_name :: proc(cpu: ^CPU, save_buf: []u8, name: string) -> (Register_Value, ^Register_Desc, Error) {
+query_register_value_by_name :: proc(cpu: ^CPU, save_buf: []u8, name: string) -> (^Register_Desc, Register_Value, Error) {
     // Get the list of buffers
     reg_buffers: [MAX_REGISTER_BUFFERS][]u8
     #partial switch cpu.arch {
@@ -224,10 +228,51 @@ query_register_value_by_name :: proc(cpu: ^CPU, save_buf: []u8, name: string) ->
     // If it's a full register we're finished, otherwise we need to load
     // the other half.
     if .Halves not_in reg.flags {
-        return reg_value, nil, .None
+        return nil, reg_value, .None
     }
     reg_value_lo, err2 := _query_register_value_by_index(save_buf, reg_buffers[:], set.ref_set, idx)
     assert(err2 == .None, "Bad arch configuration!")
     value := _reg_concat(reg_value, reg_value_lo)
-    return value, reg, .None
+    return reg, value, .None
+}
+
+format_register_value :: proc(cpu: ^CPU, reg: ^Register_Desc, value: Register_Value,
+    allocator := context.temp_allocator) -> string
+{
+    // Check to see if this register is special, if so and it has a formatter,
+    // call that formatter.
+    if .Special in reg.flags {
+        if reg.formatter != nil {
+            return reg.formatter(cpu, reg, value, allocator)
+        }
+    }
+    // Otherwise use the default formatter
+    #partial switch t in value {
+        case u8:
+            return fmt.aprintf("%02x", t, allocator)
+        case u16:
+            return fmt.aprintf("%04x", t, allocator)
+        case u32:
+            return fmt.aprintf("%08x", t, allocator)
+        case u64:
+            return fmt.aprintf("%016x", t, allocator)
+        case u80:
+            return fmt.aprintf("%020x", t, allocator)
+        case u128:
+            return fmt.aprintf("%032x", t, allocator)
+        case u256:
+            lo := t.lo
+            hi := t.hi
+            return fmt.aprintf("%032x%03x", hi, lo, allocator)
+        case u512:
+            lo := t.lo
+            hi := t.hi
+            b0 := lo.lo
+            b1 := lo.hi
+            b2 := hi.lo
+            b3 := hi.hi
+            return fmt.aprintf("%032x%03x%032x%032x", b3, b2, b1, b0, allocator)
+        case:
+            panic("Unkown register sizes or register size >= max size!")
+    }
 }
