@@ -6,6 +6,9 @@ Element_Flags_Bits :: enum {
     // Panel flags
     Panel_HLayout,
     Panel_VLayout,
+    // Element layout flags
+    Element_HFill,
+    Element_VFill,
 }
 
 Message :: enum {
