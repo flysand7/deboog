@@ -17,6 +17,7 @@ foreign x11 {
     // Display
     XOpenDisplay :: proc "c" (name: cstring) -> ^Display ---
     XDefaultGC :: proc "c" (display: ^Display, screen_number: i32) -> GC ---
+    XFlushGC :: proc "c" (display: ^Display, gc: GC) ---
     // Visual
     XDefaultVisual :: proc "c" (display: ^Display, screen_number: i32) -> ^Visual ---
     // Atom
@@ -835,6 +836,10 @@ open_display :: proc(name: cstring) -> (^Display, Error) {
 
 default_gc :: proc(display: ^Display, #any_int screen_number: i32) -> GC {
     return XDefaultGC(display, screen_number)
+}
+
+flush_gc :: proc(display: ^Display, gc: GC) {
+    XFlushGC(display, gc)
 }
 
 default_visual :: proc(display: ^Display, #any_int screen_number: i32) -> (^Visual, Error) {
