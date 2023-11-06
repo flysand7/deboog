@@ -16,10 +16,15 @@ label_create :: proc(parent: ^Element, flags: Element_Flags, text: string) -> ^L
 @(private)
 label_message :: proc(element: ^Element, message: Message, di: int, dp: rawptr) -> int {
     label := cast(^Label) element
-    if message == .Paint {
-        painter := cast(^Painter) dp
-        foreground := u32(0xffffff)
-        paint_string(painter, label.bounds, label.text, foreground)
+    #partial switch message {
+        case .Paint:
+            painter := cast(^Painter) dp
+            foreground := u32(0xffffff)
+            paint_string(painter, label.bounds, label.text, foreground)
+        case .Layout_Get_Width:
+            return len(label.text) * GLYPH_WIDTH
+        case .Layout_Get_Height:
+            return GLYPH_HEIGHT
     }
     return 0
 }

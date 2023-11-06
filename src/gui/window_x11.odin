@@ -89,10 +89,11 @@ _x11_message_loop :: proc() {
 @(private)
 _x11_end_paint :: proc(window: ^Window) {
     gc := x11.default_gc(global.display, 0)
-    x11.put_image(global.display, window.handle, gc, window.image,
-        window.dirty.l, window.dirty.t,
-        window.dirty.l, window.dirty.t,
-        window.dirty.r - window.dirty.l, window.dirty.b - window.dirty.t)
+    x := window.dirty.l
+    y := window.dirty.t
+    w := window.dirty.r - window.dirty.l
+    h := window.dirty.b - window.dirty.t
+    x11.put_image(global.display, window.handle, gc, window.image, x, y, x, y, w, h)
 }
 
 @(private)

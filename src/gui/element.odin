@@ -2,11 +2,14 @@
 package gui
 
 Element_Flags :: bit_set[Element_Flags_Bits]
-Element_Flags_Bits :: enum {}
+Element_Flags_Bits :: enum {
+    // Panel flags
+    Panel_HLayout,
+    Panel_VLayout,
+}
 
 Message :: enum {
     Update,
-    Layout,
     Paint,
     // Mouse events
     Mouse_Move,
@@ -18,6 +21,10 @@ Message :: enum {
     Mouse_Middle_Release,
     Mouse_Right_Press,
     Mouse_Right_Release,
+    // Layout events
+    Layout,
+    Layout_Get_Width,
+    Layout_Get_Height,
 }
 
 Update_Kind :: enum {
@@ -119,6 +126,6 @@ _element_paint :: proc(element: ^Element, painter: ^Painter) {
     element_message(element, .Paint, dp = cast(rawptr) painter)
     for child in element.children {
         painter.clip = clip
-        element_message(child, .Paint, dp = cast(rawptr) painter)
+        _element_paint(child, painter)
     }
 }

@@ -34,7 +34,7 @@ rect_make :: proc {
 }
 
 rect_valid :: proc(rect: Rect)->bool {
-    if rect.l <= rect.r && rect.t <= rect.b {
+    if rect.l < rect.r && rect.t < rect.b {
         return true
     }
     return false
