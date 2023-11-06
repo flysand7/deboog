@@ -7,3 +7,6 @@
 *.a
 *.elf
 *.bin
+
+# TODO: remove this
+*.i
