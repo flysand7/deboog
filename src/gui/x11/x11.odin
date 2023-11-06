@@ -44,7 +44,9 @@ foreign x11 {
     XMapWindow :: proc "c" (display: ^Display, window: Window) -> b32 ---
     XMapRaised :: proc "c" (display: ^Display, window: Window) -> b32 ---
     XSetWMProtocols :: proc "c" (display: ^Display, window: Window, protos: [^]Atom, len: i32) -> Error ---
+    // Events
     XNextEvent :: proc "c" (display: ^Display, event: ^Event) -> b32 ---
+    XPending :: proc "c" (display: ^Display) -> i32 ---
 }
 
 Xid       :: distinct uint
@@ -951,4 +953,8 @@ next_event :: proc(display: ^Display, event: ^Event) -> Error {
         return x11_last_error
     }
     return nil
+}
+
+pending :: proc(display: ^Display) -> int {
+    return cast(int) XPending(display)
 }

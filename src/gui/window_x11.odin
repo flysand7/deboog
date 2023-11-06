@@ -2,6 +2,7 @@
 package gui
 
 import "x11"
+import "core:time"
 
 @(private)
 _X11_Global :: struct {
@@ -77,12 +78,28 @@ _x11_window_create :: proc(title: cstring, width, height: int, flags: Element_Fl
     return window
 }
 
+ANIMATION_FREQUENCY :: time.Second / cast(time.Duration) 60
+
 @(private)
 _x11_message_loop :: proc() {
+    animation_counter: time.Duration
+    last_frame_time := time.now()
+    current_frame_time := time.now()
     for !global.close {
+        last_frame_time = current_frame_time
+        current_frame_time = time.now()
+        animation_counter += time.diff(last_frame_time, current_frame_time)
         event: x11.Event
-        x11.next_event(global.display, &event)
-        _x11_handle_event(event)
+        for x11.pending(global.display) > 0 {
+            x11.next_event(global.display, &event)
+            _x11_handle_event(event)
+        }
+        if animation_counter >= ANIMATION_FREQUENCY {
+            if animation_tick(animation_counter) {
+                _update_all()
+            }
+            animation_counter = 0
+        }
     }
 }
 
