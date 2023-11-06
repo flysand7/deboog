@@ -1,6 +1,8 @@
 
 package gui
 
+import "core:strings"
+
 Button :: struct {
     using element: Element,
     text: string,
@@ -8,7 +10,7 @@ Button :: struct {
 
 button_create :: proc(parent: ^Element, flags: Element_Flags, text: string) -> ^Button {
     button := element_create(parent, Button, flags)
-    button.text = text
+    button.text = strings.clone(text)
     button.msg_class = _button_message
     return button
 }
@@ -17,6 +19,8 @@ button_create :: proc(parent: ^Element, flags: Element_Flags, text: string) -> ^
 _button_message :: proc (element: ^Element, message: Message, di: int, dp: rawptr) -> int {
     button := cast(^Button) element
     #partial switch message {
+        case .Destroy:
+            delete(button.text)
         case .Paint:
             painter := cast(^Painter) dp
             hovered := button.window.hovered == button

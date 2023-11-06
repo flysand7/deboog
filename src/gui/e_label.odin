@@ -1,6 +1,8 @@
 
 package gui
 
+import "core:strings"
+
 Label :: struct {
     using element: Element,
     text: string,
@@ -8,7 +10,7 @@ Label :: struct {
 
 label_create :: proc(parent: ^Element, flags: Element_Flags, text: string) -> ^Label {
     label := element_create(parent, Label, flags)
-    label.text = text
+    label.text = strings.clone(text)
     label.msg_class = label_message
     return label
 }
@@ -17,6 +19,8 @@ label_create :: proc(parent: ^Element, flags: Element_Flags, text: string) -> ^L
 label_message :: proc(element: ^Element, message: Message, di: int, dp: rawptr) -> int {
     label := cast(^Label) element
     #partial switch message {
+        case .Destroy:
+            delete(label.text)
         case .Paint:
             painter := cast(^Painter) dp
             foreground := u32(0xffffff)

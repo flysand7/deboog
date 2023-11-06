@@ -163,7 +163,12 @@ _window_set_pressed :: proc(window: ^Window, element: ^Element, button: Mouse_Bu
 
 @(private)
 _update_all :: proc() {
-    for window in global.windows {
+    for idx := 0; idx < len(global.windows); idx += 1 {
+        window := global.windows[idx]
+        if _element_destroy_now(window) {
+            unordered_remove(&global.windows, idx)
+            idx -= 1
+        }
         if !rect_valid(window.dirty) {
             continue
         }

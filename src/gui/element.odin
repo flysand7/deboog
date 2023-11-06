@@ -3,15 +3,19 @@ package gui
 
 Element_Flags :: bit_set[Element_Flags_Bits]
 Element_Flags_Bits :: enum {
-    // Panel flags
-    Panel_HLayout,
-    Panel_VLayout,
+    // Destruction
+    Element_Destroy,
+    Element_Destroy_Descendent,
     // Element layout flags
     Element_HFill,
     Element_VFill,
+    // Panel flags
+    Panel_HLayout,
+    Panel_VLayout,
 }
 
 Message :: enum {
+    Destroy,
     Update,
     Paint,
     // Mouse events
@@ -66,9 +70,27 @@ element_create :: proc(parent: ^Element, $T: typeid, flags: Element_Flags = {}) 
     return element
 }
 
+element_destroy :: proc(element: ^Element) {
+    if .Element_Destroy in element.flags {
+        return
+    }
+    element.flags |= {.Element_Destroy}
+    for ancestor := element.parent; ancestor != nil; ancestor = ancestor.parent {
+        ancestor.flags |= {.Element_Destroy_Descendent}
+    }
+    for child in element.children {
+        element_destroy(child)
+    }
+}
+
 element_message :: proc(element: ^Element, message: Message, di: int = 0, dp: rawptr = nil) -> int {
     if element == nil {
         return 1
+    }
+    if message != .Destroy {
+        if .Element_Destroy in element.flags {
+            return 0
+        }
     }
     if element.msg_user != nil {
         result := element.msg_user(element, message, di, dp)
@@ -131,4 +153,30 @@ _element_paint :: proc(element: ^Element, painter: ^Painter) {
         painter.clip = clip
         _element_paint(child, painter)
     }
+}
+
+@(private)
+_element_destroy_now :: proc(element: ^Element) -> bool {
+    if .Element_Destroy_Descendent in element.flags {
+        element.flags &= ~{.Element_Destroy_Descendent}
+        for idx := 0; idx < len(element.children); idx += 1 {
+            if _element_destroy_now(element.children[idx]) {
+                ordered_remove(&element.children, idx)
+                idx -= 1
+            }
+        }
+    }
+    if .Element_Destroy in element.flags {
+        element_message(element, .Destroy)
+        if element.window.pressed == element {
+            _window_set_pressed(element.window, nil, nil)
+        }
+        if element.window.hovered == element {
+            element.window.hovered = element.window
+        }
+        delete(element.children)
+        free(element)
+        return true
+    }
+    return false
 }

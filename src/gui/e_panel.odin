@@ -55,6 +55,9 @@ panel_layout :: proc(panel: ^Panel, bounds: Rect, just_measure := false) -> int 
     available := is_horiz? h_space : v_space
     fill     := 0
     for child in panel.children {
+        if .Element_Destroy in child.flags {
+            continue
+        }
         if is_horiz {
             if .Element_HFill in child.flags {
                 fill += 1
@@ -79,6 +82,9 @@ panel_layout :: proc(panel: ^Panel, bounds: Rect, just_measure := false) -> int 
         per_fill = available / fill
     }
     for child in panel.children {
+        if .Element_Destroy in child.flags {
+            continue
+        }
         if is_horiz {
             height := element_message(child, .Layout_Get_Height, 0)
             width := element_message(child, .Layout_Get_Width, height)
@@ -129,6 +135,9 @@ panel_layout :: proc(panel: ^Panel, bounds: Rect, just_measure := false) -> int 
 panel_measure_lateral :: proc(panel: ^Panel) -> int {
     max_size := 0
     for child in panel.children {
+        if .Element_Destroy in child.flags {
+            continue
+        }
         message := Message.Layout_Get_Height if .Panel_HLayout in panel.flags else .Layout_Get_Width
         child_size := element_message(child, message, 0)
         max_size = max(child_size, max_size)
