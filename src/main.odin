@@ -25,6 +25,7 @@ main :: proc () {
     window  := gui.window_create("Main window", 400, 400, {})
     vpanel  := gui.panel_create(window, {.Panel_VLayout})
     hpanel  := gui.panel_create(vpanel, {.Panel_HLayout})
+    hpanel.gap = 50
     gui.label_create(hpanel, {}, "Click this:")
     button := gui.button_create(hpanel, {}, "Click me!")
     button.msg_user = button_msg

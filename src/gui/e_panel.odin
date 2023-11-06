@@ -3,6 +3,8 @@ package gui
 
 Panel :: struct {
     using element: Element,
+    border:        Rect,
+    gap:           int,
 }
 
 panel_create :: proc(parent: ^Element, flags: Element_Flags) -> ^Panel {
@@ -44,37 +46,42 @@ panel_message :: proc(element: ^Element, message: Message, di: int, dp: rawptr) 
 
 @(private)
 panel_layout :: proc(panel: ^Panel, bounds: Rect, just_measure := false) -> int {
-    position := 0
-    h_space := bounds.r - bounds.l
-    v_space := bounds.b - bounds.t
+    border1  := .Panel_HLayout in panel.flags? panel.border.l : panel.border.t
+    border2  := .Panel_HLayout in panel.flags? panel.border.t : panel.border.l
+    position := border1
+    h_space  := bounds.r - bounds.l - panel.border.r - panel.border.l
+    v_space  := bounds.b - bounds.t - panel.border.t - panel.border.b
     for child in panel.children {
         if .Panel_HLayout in panel.flags {
             height := element_message(child, .Layout_Get_Height, 0)
             width := element_message(child, .Layout_Get_Width, height)
             rect := rect_make(
                 bounds.l + position,
-                (v_space - height) / 2 + bounds.t,
+                border2 + (v_space - height) / 2 + bounds.t,
                 bounds.l + width + position,
-                (v_space + height) / 2 + bounds.t)
+                border2 + (v_space + height) / 2 + bounds.t)
             if !just_measure {
                 element_move(child, rect, false)
             }
-            position += width
+            position += width + panel.gap
         } else {
             width := element_message(child, .Layout_Get_Width, 0)
             height := element_message(child, .Layout_Get_Height, width)
             rect := rect_make(
-                (h_space - width)/2 + bounds.l,
+                border2 + (h_space - width)/2 + bounds.l,
                 bounds.t + position,
-                (h_space + width)/2 + bounds.l,
+                border2 + (h_space + width)/2 + bounds.l,
                 bounds.t + height + position)
             if !just_measure {
                 element_move(child, rect, false)
             }
-            position += height            
+            position += height + panel.gap
         }
     }
-    return position
+    if len(panel.children) > 0 {
+        position -= panel.gap
+    }
+    return position + border1
 }
 
 @(private)
@@ -85,5 +92,8 @@ panel_measure_lateral :: proc(panel: ^Panel) -> int {
         child_size := element_message(child, message, 0)
         max_size = max(child_size, max_size)
     }
-    return max_size
+    h_border := panel.border.t + panel.border.b
+    v_border := panel.border.l + panel.border.r
+    border := h_border if .Panel_HLayout in panel.flags else v_border
+    return max_size + border
 }
