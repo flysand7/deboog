@@ -3,163 +3,153 @@ package gui
 
 import math "core:math"
 import math_ease "core:math/ease"
+import "core:intrinsics"
 import "core:time"
 
 Ease_Fn :: math_ease.Ease
 
-animations_scalar: [dynamic]Scalar_Animation
-animations_color:  [dynamic]Color_Animation
+@(private="file") animations_scalar: [dynamic]Animation(int)
+@(private="file") animations_color:  [dynamic]Animation(u32)
 
 /*
-    These represent handles to the properties that may be animated.
-    If `animation_id` is negative, that means no animation is taking
-    place. This value is used by the animation engine to figure out
-    whether a new animation needs to be created or an existing one
-    can be re-used.
+    This is the data used by the animation engine to manage the animations.
+    
+    First, it needs to know which element to signal when its properties are
+    being updated. Of course this makes the assumption that properties are
+    not shared between the elements.
+    
+    Secondly, it needs to know whether the property is already being animated.
+    If it is being animated, we can find it in the list of animations and
+    reschedule the animation from there. Otherwise we need to create a new
+    animation.
+    
+    The third thing it needs is the in-flight value that will be used by
+    the components for various reasons like painting themselves.
 */
-Scalar_Property :: struct {
+@(private="file")
+Property :: struct($T: typeid) {
     owner:        ^Element,
     animation_id: int,
-    value:        int,
+    value:        T,
 }
 
-Color_Property :: struct {
-    owner:        ^Element,
-    animation_id: int,
-    value:        u32,
-}
+Scalar_Property :: Property(int)
+Color_Property  :: Property(u32)
 
 /*
-    These animation descriptors define what needs to be animated and how
+    This animation descriptor defines what needs to be animated and how
     it needs to be animated.
+    
+    Animation has two polymorphic types attached to it: one for the type
+    of the property it animates and the other for the animation state.
 */
-Scalar_Animation :: struct {
-    property: ^Scalar_Property,
+Animation :: struct($T: typeid) {
+    property: ^Property(T),
     ease_fn:  Ease_Fn,
     progress: f32,
     duration: f32,
-    start:    f32,
-    final:    f32,
-}
-
-Color_Animation :: struct {
-    property: ^Color_Property,
-    ease_fn:  Ease_Fn,
-    progress: f32,
-    duration: f32,
-    start:    [3]f32,
-    final:    [3]f32,
+    start:    T,
+    final:    T,
 }
 
 scalar_property :: proc(owner: ^Element, value: int) -> Scalar_Property {
     return Scalar_Property {
         owner = owner,
-        value = value,
         animation_id = -1,
+        value = value,
     }
 }
 
 color_property :: proc(owner: ^Element, value: u32) -> Color_Property {
     return Color_Property {
         owner = owner,
-        value = value,
         animation_id = -1,
+        value = value,
     }
 }
 
-animate_scalar :: proc(property: ^Scalar_Property,
-    final: int, duration: time.Duration, ease_fn := Ease_Fn.Cubic_In_Out)
-{
+animate :: proc(property: ^Property($T), final: T, duration: time.Duration, ease_fn := Ease_Fn.Cubic_In_Out) {
+    animations := animation_array_for_property(type_of(property^), T)
     if property.animation_id >= 0 {
-        animation := &animations_scalar[property.animation_id]
+        animation := &(animations^)[property.animation_id]
         animation.ease_fn = ease_fn
         animation.progress = 0
         animation.duration = cast(f32) duration
-        animation.start = cast(f32) property.value
-        animation.final = cast(f32) final
+        animation.start = property.value
+        animation.final = final
     } else {
-        property.animation_id = len(animations_scalar)
-        append(&animations_scalar, Scalar_Animation {
+        property.animation_id = len(animations^)
+        append(animations, Animation(T) {
             property = property,
             ease_fn  = ease_fn,
             progress = 0,
             duration = cast(f32) duration,
-            start    = cast(f32) property.value,
-            final    = cast(f32) final,
+            start    = property.value,
+            final    = final,
         })
-    }
-}
-
-animate_color :: proc(property: ^Color_Property,
-    final: u32, duration: time.Duration, ease_fn := Ease_Fn.Cubic_In_Out)
-{
-    if property.animation_id >= 0 {
-        // Another animation in-progress, just overwrite it.
-        animation := &animations_color[property.animation_id]
-        animation.ease_fn = ease_fn
-        animation.progress = 0
-        animation.duration = cast(f32) duration
-        animation.start = ciexyz_from_u32(property.value)
-        animation.final = ciexyz_from_u32(final)
-    } else {
-        animation := Color_Animation {
-            property = property,
-            ease_fn  = ease_fn,
-            progress = 0,
-            duration = cast(f32) duration,
-            start    = ciexyz_from_u32(property.value),
-            final    = ciexyz_from_u32(final),
-        }
-        property.animation_id = len(animations_color)
-        append(&animations_color, animation)
     }
 }
 
 @(private)
 animation_tick :: proc(dt: time.Duration) -> bool {
+    animated := false
+    animated ||= animation_tick_for(Scalar_Property, int, dt)
+    animated ||= animation_tick_for(Color_Property, u32, dt)
+    return animated
+}
+
+@(private="file")
+animation_tick_for :: #force_inline proc($P: typeid, $T: typeid, dt: time.Duration)->bool {
+    animations := animation_array_for_property(P, T)
     something_got_animated := false
-    for idx := 0; idx < len(animations_scalar); idx += 1 {
-        animation := &animations_scalar[idx]
+    for idx := 0; idx < len(animations^); idx += 1 {
+        animation := &animations[idx]
         property := animation.property
         t := animation.progress / animation.duration
         if t >= 1 {
             // Animation completed, let's delete it!
             property.animation_id = -1
-            unordered_remove(&animations_scalar, idx)
+            unordered_remove(animations, idx)
             idx -= 1
             continue
         }
         animation.progress += cast(f32) dt
-        property.value = interp_scalar(animation.start, animation.final, t, animation.ease_fn)
-        element_repaint(property.owner)
-        something_got_animated = true
-    }
-    for idx := 0; idx < len(animations_color); idx += 1 {
-        animation := &animations_color[idx]
-        property := animation.property
-        t := animation.progress / animation.duration
-        if t >= 1 {
-            property.animation_id = -1
-            unordered_remove(&animations_color, idx)
-            idx -= 1
-            continue
+        when P == Scalar_Property {
+            property.value = interp_scalar(animation.start, animation.final, t, animation.ease_fn)
+        } else when P == Color_Property {
+            property.value = interp_color(animation.start, animation.final, t, animation.ease_fn)
+        } else {
+            #panic("Unknown property type")
         }
-        animation.progress += cast(f32) dt
-        property.value = interp_color(animation.start, animation.final, t, animation.ease_fn)
         element_repaint(property.owner)
         something_got_animated = true
     }
     return something_got_animated
 }
 
-@(private)
-interp_scalar :: proc(start, end: f32, t: f32, ease_fn: Ease_Fn) -> int {
+@(private="file")
+animation_array_for_property :: #force_inline proc($P: typeid, $T: typeid) -> ^[dynamic]Animation(T) {
+    when P == Scalar_Property {
+        return &animations_scalar
+    } else when P == Color_Property {
+        return &animations_color
+    } else {
+        #panic("Unknown property type")
+    }
+}
+
+@(private="file")
+interp_scalar :: proc(start, end: int, t: f32, ease_fn: Ease_Fn) -> int {
+    start := cast(f32) start
+    end   := cast(f32) end
     t1 := math_ease.ease(ease_fn, t)
     return cast(int) math.round((1-t1)*start + t*end)
 }
 
-@(private)
-interp_color :: proc(start, end: [3]f32, t: f32, ease_fn: Ease_Fn) -> u32 {
+@(private="file")
+interp_color :: proc(start, end: u32, t: f32, ease_fn: Ease_Fn) -> u32 {
+    start := ciexyz_from_u32(start)
+    end   := ciexyz_from_u32(end)
     t1 := math_ease.ease(ease_fn, t)
     xyz := (1-t1)*start + t*end
     return u32_from_ciexyz(xyz)
