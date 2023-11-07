@@ -23,13 +23,13 @@ main :: proc () {
     log.debugf("Logger set up!")
     gui.initialize()
     window  := gui.window_create("Main window", 400, 400, {})
-    vpanel  := gui.panel_create(window, {.Panel_VLayout})
+    vpanel  := gui.vpanel_create(window)
     vpanel.gap = 10
-    hpanel1 := gui.panel_create(vpanel, {.Panel_HLayout})
+    hpanel1 := gui.hpanel_create(vpanel)
     hpanel1.gap = 50
     gui.label_create(hpanel1, {}, "Click this:")
     button := gui.button_create(hpanel1, {}, "Click me!")
-    hpanel2 := gui.panel_create(vpanel, {.Panel_HLayout})
+    hpanel2 := gui.hpanel_create(vpanel)
     hpanel2.gap = 50
     gui.label_create(hpanel2, {}, "Check this out:")
     gui.checkbox_create(hpanel2, {}, true)
