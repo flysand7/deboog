@@ -69,7 +69,6 @@ vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> in
             width = h_space
         } else {
             if .Element_VFill in child.flags {
-                // TODO(flysand): This seems wrong.
                 width = element_message(child, .Layout_Get_Width, per_fill)
             } else {
                 width = element_message(child, .Layout_Get_Width, 0)
