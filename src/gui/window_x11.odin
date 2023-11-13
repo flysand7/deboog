@@ -1,28 +1,27 @@
 //+build linux, freebsd, openbsd
 package gui
 
-import "x11"
+import "vendor:x11/xlib"
 import "core:time"
 
 @(private)
 _X11_Global :: struct {
-    display:   ^x11.Display,
-    visual:    ^x11.Visual,
-    wm_delete: x11.Atom,
+    display:   ^xlib.Display,
+    visual:    ^xlib.Visual,
+    wm_delete: xlib.Atom,
 }
 
 @(private)
 _X11_Window :: struct {
-    handle: x11.Window,
-    image: ^x11.Image,
+    handle: xlib.Window,
+    image: ^xlib.XImage,
 }
 
 @(private)
 _x11_initialize :: proc() {
-    x11.default_error_handling(.Async_Log_Error)
-    global.display,   _ = x11.open_display(nil)
-    global.visual,    _ = x11.default_visual(global.display, 0)
-    global.wm_delete, _ = x11.intern_atom(global.display, "WM_DELETE_WINDOW", false)
+    global.display   = xlib.XOpenDisplay(nil)
+    global.visual    = xlib.XDefaultVisual(global.display, 0)
+    global.wm_delete = xlib.XInternAtom(global.display, "WM_DELETE_WINDOW", false)
 }
 
 @(private)
@@ -35,38 +34,40 @@ _x11_window_create :: proc(title: cstring, width, height: int, flags: Element_Fl
     window.msg_class = _window_message_proc
     window.window = window
     // Initialize attributes
-    window_attr: x11.Window_Attributes_Set
-    x11.attribute_override_redirect(&window_attr, false)
+    wattr := xlib.XSetWindowAttributes{}
+    wmask := xlib.WindowAttributeMask{}
+    wattr.override_redirect = false
+    wmask |= {.CWOverrideRedirect}
     // Get the root window and proceed creating our window
-    root_window, _ := x11.default_root_window(global.display)
-    window.handle, _ = x11.create_window(
+    root_window := xlib.XDefaultRootWindow(global.display)
+    window.handle = xlib.XCreateWindow(
         global.display,
         root_window,
-        0, 0, width, height,
+        0, 0, cast(u32) width, cast(u32) height,
         0, 0,
-        .Input_Output,
+        .InputOutput,
         global.visual,
-        &window_attr)
+        wmask, &wattr)
     // Allow the window to be closed
-    x11.set_wm_protocols(global.display, window.handle, []x11.Atom{global.wm_delete})
+    xlib.XSetWMProtocols(global.display, window.handle, &global.wm_delete, 1)
     // Set the window title and mask for events we want to receive
-    x11.store_name(global.display, window.handle, title)
-    x11.select_input(global.display, window.handle, {
-        .Substructure_Notify, .Structure_Notify,
+    xlib.XStoreName(global.display, window.handle, title)
+    xlib.XSelectInput(global.display, window.handle, {
+        .SubstructureNotify, .StructureNotify,
         .Exposure,
-        .Pointer_Motion,
-        .Button_Press, .Button_Release,
-        .Key_Press, .Key_Release,
-        .Enter_Window, .Leave_Window,
-        .Button_Motion,
-        .Keymap_State,
-        .Focus_Change,
-        .Property_Change,
+        .PointerMotion,
+        .ButtonPress, .ButtonRelease,
+        .KeyPress, .KeyRelease,
+        .EnterWindow, .LeaveWindow,
+        .ButtonMotion,
+        .KeymapState,
+        .FocusChange,
+        .PropertyChange,
     })
     // Bring the window to front
-    x11.map_raised(global.display, window.handle)
+    xlib.XMapRaised(global.display, window.handle)
     // Create the backing buffer
-    window.image, _ = x11.create_image(
+    window.image = xlib.XCreateImage(
         global.display,
         global.visual,
         24,
@@ -89,9 +90,9 @@ _x11_message_loop :: proc() {
         last_frame_time = current_frame_time
         current_frame_time = time.now()
         animation_counter += time.diff(last_frame_time, current_frame_time)
-        event: x11.Event
-        for x11.pending(global.display) > 0 {
-            x11.next_event(global.display, &event)
+        event: xlib.XEvent
+        for xlib.XPending(global.display) > 0 {
+            xlib.XNextEvent(global.display, &event)
             _x11_handle_event(event)
         }
         if animation_counter >= ANIMATION_FREQUENCY {
@@ -105,19 +106,27 @@ _x11_message_loop :: proc() {
 
 @(private)
 _x11_end_paint :: proc(window: ^Window) {
-    gc := x11.default_gc(global.display, 0)
+    gc := xlib.XDefaultGC(global.display, 0)
     x := window.dirty.l
     y := window.dirty.t
     w := window.dirty.r - window.dirty.l
     h := window.dirty.b - window.dirty.t
-    x11.put_image(global.display, window.handle, gc, window.image, x, y, x, y, w, h)
+    xlib.XPutImage(
+        global.display,
+        window.handle,
+        gc,
+        window.image,
+        cast(i32) x, cast(i32) y,
+        cast(i32) x, cast(i32) y,
+        cast(u32) w, cast(u32) h,
+    )
 }
 
 @(private)
-_x11_handle_event :: proc(#by_ptr event: x11.Event) {
+_x11_handle_event :: proc(#by_ptr event: xlib.XEvent) {
     #partial switch event.type {
-    case .Client_Message:
-        if cast(uint) event.xclient.data.l[0] == global.wm_delete {
+    case .ClientMessage:
+        if cast(xlib.Atom) event.xclient.data.l[0] == global.wm_delete {
             if len(global.windows) > 0 && global.windows[0].handle == event.xclient.window {
                 global.close = true
             } else {
@@ -129,10 +138,17 @@ _x11_handle_event :: proc(#by_ptr event: x11.Event) {
         if window == nil {
             return
         }
-        gc := x11.default_gc(global.display, 0)
-        x11.put_image(global.display, window.handle, gc, window.image,
-            0, 0, 0, 0, window.width, window.height)
-    case .Configure_Notify:
+        gc := xlib.XDefaultGC(global.display, 0)
+        xlib.XPutImage(
+            global.display,
+            window.handle,
+            gc,
+            window.image,
+            0, 0, 0, 0,
+            cast(u32) window.width,
+            cast(u32) window.height,
+        )
+    case .ConfigureNotify:
         window: ^Window = _x11_find_window(event.xconfigure.window)
         if window == nil {
             global.close = true
@@ -149,7 +165,7 @@ _x11_handle_event :: proc(#by_ptr event: x11.Event) {
             }
             window.image.width = cast(i32) new_width
             window.image.height = cast(i32) new_height
-            window.image.stride = cast(i32) (new_width * size_of(u32))
+            window.image.bytes_per_line = cast(i32) (new_width * size_of(u32))
             window.image.data = cast([^]u8) raw_data(window.pixels)
             // Set new window bounds and send the Layout message.
             window.bounds = rect_make2({0, 0}, {new_width, new_height})
@@ -157,7 +173,7 @@ _x11_handle_event :: proc(#by_ptr event: x11.Event) {
             element_message(window, .Layout)
             _update_all()
         }
-    case .Motion_Notify:
+    case .MotionNotify:
         window := _x11_find_window(event.xmotion.window)
         if window == nil {
             return
@@ -165,7 +181,7 @@ _x11_handle_event :: proc(#by_ptr event: x11.Event) {
         window.cursor_x = cast(int) event.xmotion.x
         window.cursor_y = cast(int) event.xmotion.y
         _window_input_event(window, .Mouse_Move)
-    case .Leave_Notify:
+    case .LeaveNotify:
         window := _x11_find_window(event.xmotion.window)
         if window == nil {
             return
@@ -175,7 +191,7 @@ _x11_handle_event :: proc(#by_ptr event: x11.Event) {
             window.cursor_y = -1
         }
         _window_input_event(window, .Mouse_Move)
-    case .Button_Press, .Button_Release:
+    case .ButtonPress, .ButtonRelease:
         window := _x11_find_window(event.xbutton.window)
         if window == nil {
             return
@@ -183,7 +199,7 @@ _x11_handle_event :: proc(#by_ptr event: x11.Event) {
         window.cursor_x = cast(int) event.xbutton.x
         window.cursor_y = cast(int) event.xbutton.y
         button := event.xbutton.button
-        if event.type == .Button_Press {
+        if event.type == .ButtonPress {
             #partial switch button {
                 case .Button1: _window_input_event(window, .Mouse_Left_Press)
                 case .Button2: _window_input_event(window, .Mouse_Middle_Press)
@@ -200,11 +216,11 @@ _x11_handle_event :: proc(#by_ptr event: x11.Event) {
 }
 
 _x11_destroy_window :: proc(window: ^Window) {
-    x11.destroy_window(global.display, window.handle)
+    xlib.XDestroyWindow(global.display, window.handle)
 }
 
 @(private)
-_x11_find_window :: proc(handle: x11.Window) -> ^Window {
+_x11_find_window :: proc(handle: xlib.Window) -> ^Window {
     for w in global.windows {
         if w.handle == handle {
             return w
