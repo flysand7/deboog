@@ -36,8 +36,8 @@ main :: proc () {
     gui.label_create(hpanel2, {}, "Check this out:")
     gui.checkbox_create(hpanel2, {}, true)
     // Third hpanel
-    vpanel2 := gui.vpanel_create(vpanel, {.Element_HFill, .Element_VFill})
-    gui.text_view_create(vpanel2, {}, "Hello, world, I'm text!\nSeocnd line of text!\nThird??")
+    vpanel2 := gui.vpanel_create(vpanel, {.Element_HFill})
+    gui.text_view_create(vpanel2, {.Element_HFill}, "Hello, world, I'm text!\nSeocnd line of text!\nThird??")
     button.msg_user = button_msg
     gui.message_loop()
 }

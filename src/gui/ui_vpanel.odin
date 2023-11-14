@@ -32,6 +32,7 @@ vpanel_message :: proc(element: ^Element, message: Message, di: int, dp: rawptr)
     return 0
 }
 
+import "core:fmt"
 @(private="file")
 vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> int {
     border1  := panel.border.t
@@ -78,6 +79,7 @@ vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> in
             height = element_message(child, .Layout_Get_Height, per_fill)
         } else {
             height = element_message(child, .Layout_Get_Height, width)
+            fmt.printf("Want height: %d\n", height)
         }
         rect := rect_make(
             border2 + (h_space - width)/2 + bounds.l,
