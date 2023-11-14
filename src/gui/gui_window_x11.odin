@@ -8,6 +8,7 @@ import "core:time"
 _X11_Global :: struct {
     display:   ^xlib.Display,
     visual:    ^xlib.Visual,
+    root:      xlib.Window,
     wm_delete: xlib.Atom,
 }
 
@@ -39,10 +40,10 @@ _x11_window_create :: proc(title: cstring, width, height: int, flags: Element_Fl
     wattr.override_redirect = false
     wmask |= {.CWOverrideRedirect}
     // Get the root window and proceed creating our window
-    root_window := xlib.XDefaultRootWindow(global.display)
+    global.root = xlib.XDefaultRootWindow(global.display)
     window.handle = xlib.XCreateWindow(
         global.display,
-        root_window,
+        global.root,
         0, 0, cast(u32) width, cast(u32) height,
         0, 0,
         .InputOutput,
@@ -76,6 +77,8 @@ _x11_window_create :: proc(title: cstring, width, height: int, flags: Element_Fl
         nil,
         10, 10,
         32, 0)
+    // Set it to float
+    _x11_window_set_floating(window.handle)
     return window
 }
 
@@ -227,4 +230,34 @@ _x11_find_window :: proc(handle: xlib.Window) -> ^Window {
         }
     }
     return nil
+}
+
+@(private)
+_x11_window_set_floating :: proc(handle: xlib.Window) {
+    net_wm_state_add := xlib.Atom(1)
+    net_wm_state := xlib.XInternAtom(global.display, "_NET_WM_STATE", false)
+    net_wm_state_above := xlib.XInternAtom(global.display, "_NET_WM_STATE_ABOVE", false)
+    // Send event to WM to add floating state.
+    event := xlib.XEvent{
+        xclient = {
+            type = .ClientMessage,
+            window = handle,
+            format = 32,
+            message_type = net_wm_state,
+            data = {
+                l = {
+                    cast(int) net_wm_state_add,
+                    cast(int) net_wm_state_above,
+                    0,
+                    1,
+                    0,
+                },
+            },
+        },
+    }
+    event_mask: xlib.EventMask = {
+        .SubstructureNotify,
+        .SubstructureRedirect,
+    }
+    xlib.XSendEvent(global.display, global.root, false, event_mask, &event)
 }
