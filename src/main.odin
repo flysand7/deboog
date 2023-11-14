@@ -10,9 +10,9 @@ _ :: arch
 
 import "gui"
 
-button_msg :: proc(element: ^gui.Element, message: gui.Message, di: int, dp: rawptr)->int {
-    #partial switch message {
-        case .Mouse_Clicked:
+button_msg :: proc(element: ^gui.Element, message: gui.Msg)->int {
+    #partial switch msg in message {
+        case gui.Msg_Input:
             log.debugf("Button press!")
     }
     return 0
@@ -26,12 +26,12 @@ main :: proc () {
     vpanel  := gui.vpanel_create(window)
     vpanel.gap = 10
     // First hpanel
-    hpanel1 := gui.hpanel_create(vpanel, {.Element_HFill, .Element_VFill})
+    hpanel1 := gui.hpanel_create(vpanel, {.Element_HFill})
     hpanel1.gap = 50
     gui.label_create(hpanel1, {}, "Click this:")
     button := gui.button_create(hpanel1, {}, "Click me!")
     // Second hpanel
-    hpanel2 := gui.hpanel_create(vpanel)
+    hpanel2 := gui.hpanel_create(vpanel, {.Element_HFill})
     hpanel2.gap = 50
     gui.label_create(hpanel2, {}, "Check this out:")
     gui.checkbox_create(hpanel2, {}, true)

@@ -97,7 +97,6 @@ _window_message_proc :: proc(element: ^Element, message: Msg)->int {
 
 @(private)
 _window_input_event :: proc(window: ^Window, message: Msg) -> int {
-    
     if window.pressed != nil {
         if input,ok := message.(Msg_Input); ok {
             if input == .Move {
