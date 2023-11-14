@@ -14,32 +14,54 @@ Element_Flags_Bits :: enum {
     Panel_VLayout,
 }
 
-Message :: enum {
-    Destroy,
-    Update,
-    Paint,
-    // Mouse events
-    Mouse_Move,
-    Mouse_Drag,
-    Mouse_Clicked,
-    Mouse_Left_Press,
-    Mouse_Left_Release,
-    Mouse_Middle_Press,
-    Mouse_Middle_Release,
-    Mouse_Right_Press,
-    Mouse_Right_Release,
-    // Layout events
-    Layout,
-    Layout_Get_Width,
-    Layout_Get_Height,
+Msg_Destroy :: struct {}
+Msg_Paint   :: ^Painter
+Msg_Layout  :: struct {}
+
+Msg_Preferred_Width :: struct {
+    height: Maybe(int),
 }
 
-Update_Kind :: enum {
+Msg_Preferred_Height :: struct {
+    width: Maybe(int),
+}
+
+// TODO(flysand): This needs to be refactored into a struct
+// Containing the relevant input Message.
+Msg_Input :: enum {
+    Move,
+    Drag,
+    Clicked,
+    Left_Press,
+    Left_Release,
+    Middle_Press,
+    Middle_Release,
+    Right_Press,
+    Right_Release,
     Hovered,
     Pressed,
 }
 
-Message_Proc :: #type proc (element: ^Element, message: Message, di: int, dp: rawptr) -> int
+Msg :: union {
+    // Element is expected to free all if its associated data.
+    Msg_Destroy,
+    // Element uses this to react to it's state changes and update state
+    // in accordance to that. For example button can react to the hover event,
+    // change it's background color and redraw itself.
+    Msg_Input,
+    // In response to this event the element must issue draw commands to draw
+    // itself.
+    Msg_Paint,
+    // This is handled by layout managers only -- it specifies when layout of
+    // children elements needs to be re-calculated.
+    Msg_Layout,
+    // In response to this message element returns its preferred width.
+    Msg_Preferred_Width,
+    // In response to this message element returns its preferred width.
+    Msg_Preferred_Height,
+}
+
+Message_Proc :: #type proc (element: ^Element, message: Msg) -> int
 
 Element :: struct {
     parent:    ^Element,
@@ -83,23 +105,23 @@ element_destroy :: proc(element: ^Element) {
     }
 }
 
-element_message :: proc(element: ^Element, message: Message, di: int = 0, dp: rawptr = nil) -> int {
+element_message :: proc(element: ^Element, message: Msg) -> int {
     if element == nil {
         return 1
     }
-    if message != .Destroy {
+    if _,ok := message.(Msg_Destroy); ok {
         if .Element_Destroy in element.flags {
             return 0
         }
     }
     if element.msg_user != nil {
-        result := element.msg_user(element, message, di, dp)
+        result := element.msg_user(element, message)
         if result != 0 {
             return result
         }
     }
     if element.msg_class != nil {
-        result := element.msg_class(element, message, di, dp)
+        result := element.msg_class(element, message)
         if result != 0 {
             return result
         }
@@ -115,7 +137,7 @@ element_move :: proc(element: ^Element, bounds: Rect, force_layout: bool) {
         force_layout
     {
         element.bounds = bounds
-        element_message(element, .Layout)
+        element_message(element, Msg_Layout{})
     }
 }
 
@@ -148,7 +170,7 @@ _element_paint :: proc(element: ^Element, painter: ^Painter) {
         return
     }
     painter.clip = clip
-    element_message(element, .Paint, dp = cast(rawptr) painter)
+    element_message(element, painter)
     for child in element.children {
         painter.clip = clip
         _element_paint(child, painter)
@@ -167,7 +189,7 @@ _element_destroy_now :: proc(element: ^Element) -> bool {
         }
     }
     if .Element_Destroy in element.flags {
-        element_message(element, .Destroy)
+        element_message(element, Msg_Destroy{})
         if element.window.pressed == element {
             _window_set_pressed(element.window, nil, nil)
         }

@@ -16,13 +16,12 @@ button_create :: proc(parent: ^Element, flags: Element_Flags, text: string) -> ^
 }
 
 @(private)
-_button_message :: proc (element: ^Element, message: Message, di: int, dp: rawptr) -> int {
+_button_message :: proc (element: ^Element, message: Msg) -> int {
     button := cast(^Button) element
-    #partial switch message {
-        case .Destroy:
+    #partial switch msg in message {
+        case Msg_Destroy:
             delete(button.text)
-        case .Paint:
-            painter := cast(^Painter) dp
+        case Msg_Paint:
             hovered := button.window.hovered == button
             pressed := button.window.pressed == button && button.window.hovered == button
             color_bg_normal := u32(0x000000)
@@ -32,13 +31,13 @@ _button_message :: proc (element: ^Element, message: Message, di: int, dp: rawpt
             color_fg := color_fg_press  if pressed else
                         color_fg_active if hovered else
                         color_fg_normal
-            paint_rect(painter, button.bounds, color_bg_normal, color_fg)
-            paint_string(painter, button.bounds, button.text, color_fg)
-        case .Update:
+            paint_rect(msg, button.bounds, color_bg_normal, color_fg)
+            paint_string(msg, button.bounds, button.text, color_fg)
+        case Msg_Input:
             element_repaint(button, nil)
-        case .Layout_Get_Width:
+        case Msg_Preferred_Width:
             return 30 + len(button.text) * GLYPH_WIDTH
-        case .Layout_Get_Height:
+        case Msg_Preferred_Height:
             return 15 + GLYPH_HEIGHT
             
     }

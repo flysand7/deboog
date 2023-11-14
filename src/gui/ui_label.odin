@@ -16,18 +16,17 @@ label_create :: proc(parent: ^Element, flags: Element_Flags, text: string) -> ^L
 }
 
 @(private)
-label_message :: proc(element: ^Element, message: Message, di: int, dp: rawptr) -> int {
+label_message :: proc(element: ^Element, message: Msg) -> int {
     label := cast(^Label) element
-    #partial switch message {
-        case .Destroy:
+    #partial switch msg in message {
+        case Msg_Destroy:
             delete(label.text)
-        case .Paint:
-            painter := cast(^Painter) dp
+        case Msg_Paint:
             foreground := u32(0xffffff)
-            paint_string(painter, label.bounds, label.text, foreground)
-        case .Layout_Get_Width:
+            paint_string(msg, label.bounds, label.text, foreground)
+        case Msg_Preferred_Width:
             return len(label.text) * GLYPH_WIDTH
-        case .Layout_Get_Height:
+        case Msg_Preferred_Height:
             return GLYPH_HEIGHT
     }
     return 0

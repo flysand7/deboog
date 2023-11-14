@@ -170,7 +170,7 @@ _x11_handle_event :: proc(#by_ptr event: xlib.XEvent) {
             // Set new window bounds and send the Layout message.
             window.bounds = rect_make2({0, 0}, {new_width, new_height})
             window.clip = rect_make2({0, 0}, {new_width, new_height})
-            element_message(window, .Layout)
+            element_message(window, Msg_Layout{})
             _update_all()
         }
     case .MotionNotify:
@@ -180,7 +180,7 @@ _x11_handle_event :: proc(#by_ptr event: xlib.XEvent) {
         }
         window.cursor_x = cast(int) event.xmotion.x
         window.cursor_y = cast(int) event.xmotion.y
-        _window_input_event(window, .Mouse_Move)
+        _window_input_event(window, Msg_Input.Move)
     case .LeaveNotify:
         window := _x11_find_window(event.xmotion.window)
         if window == nil {
@@ -190,7 +190,7 @@ _x11_handle_event :: proc(#by_ptr event: xlib.XEvent) {
             window.cursor_x = -1
             window.cursor_y = -1
         }
-        _window_input_event(window, .Mouse_Move)
+        _window_input_event(window, Msg_Input.Move)
     case .ButtonPress, .ButtonRelease:
         window := _x11_find_window(event.xbutton.window)
         if window == nil {
@@ -201,15 +201,15 @@ _x11_handle_event :: proc(#by_ptr event: xlib.XEvent) {
         button := event.xbutton.button
         if event.type == .ButtonPress {
             #partial switch button {
-                case .Button1: _window_input_event(window, .Mouse_Left_Press)
-                case .Button2: _window_input_event(window, .Mouse_Middle_Press)
-                case .Button3: _window_input_event(window, .Mouse_Right_Press)
+                case .Button1: _window_input_event(window, Msg_Input.Left_Press)
+                case .Button2: _window_input_event(window, Msg_Input.Middle_Press)
+                case .Button3: _window_input_event(window, Msg_Input.Right_Press)
             }
         } else {
             #partial switch button {
-                case .Button1: _window_input_event(window, .Mouse_Left_Release)
-                case .Button2: _window_input_event(window, .Mouse_Middle_Release)
-                case .Button3: _window_input_event(window, .Mouse_Right_Release)
+                case .Button1: _window_input_event(window, Msg_Input.Left_Release)
+                case .Button2: _window_input_event(window, Msg_Input.Middle_Release)
+                case .Button3: _window_input_event(window, Msg_Input.Right_Release)
             }
         }
     }

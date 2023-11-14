@@ -15,18 +15,17 @@ hpanel_create :: proc(parent: ^Element, flags: Element_Flags = {}) -> ^HPanel {
 }
 
 @(private="file")
-hpanel_message :: proc(element: ^Element, message: Message, di: int, dp: rawptr) -> int {
+hpanel_message :: proc(element: ^Element, message: Msg) -> int {
     panel := cast(^HPanel) element
-    #partial switch message {
-        case .Paint:
-            painter := cast(^Painter) dp
-            paint_box(painter, panel.bounds, 0x000000)
-        case .Layout:
+    #partial switch msg in message {
+        case Msg_Paint:
+            paint_box(msg, panel.bounds, 0x000000)
+        case Msg_Layout:
             hpanel_layout(panel, panel.bounds)
             element_repaint(panel)
-        case .Layout_Get_Width:
-            return hpanel_layout(panel, rect_make(0, 0, 0, di), just_measure = true)
-        case .Layout_Get_Height:
+        case Msg_Preferred_Width:
+            return hpanel_layout(panel, rect_make(0, 0, 0, (msg.height.? or_else 0)), just_measure = true)
+        case Msg_Preferred_Height:
             return hpanel_max_height(panel)
     }
     return 0
@@ -48,7 +47,7 @@ hpanel_layout :: proc(panel: ^HPanel, bounds: Rect, just_measure := false) -> in
         if .Element_HFill in child.flags {
             fill += 1
         } else if available > 0 {
-            width := element_message(child, .Layout_Get_Width, v_space)
+            width := element_message(child, Msg_Preferred_Width{height = v_space})
             available -= width
         }
     }
@@ -64,8 +63,8 @@ hpanel_layout :: proc(panel: ^HPanel, bounds: Rect, just_measure := false) -> in
             continue
         }
         // TODO(flysand): Forgot to handle the HFill flag.
-        height := element_message(child, .Layout_Get_Height, 0)
-        width := element_message(child, .Layout_Get_Width, height)
+        height := element_message(child, Msg_Preferred_Height{})
+        width := element_message(child, Msg_Preferred_Width{height = height})
         rect := rect_make(
             bounds.l + position,
             border2 + (v_space - height) / 2 + bounds.t,
@@ -89,7 +88,7 @@ hpanel_max_height :: proc(panel: ^HPanel) -> int {
         if .Element_Destroy in child.flags {
             continue
         }
-        child_height := element_message(child, .Layout_Get_Height, 0)
+        child_height := element_message(child, Msg_Preferred_Height{})
         max_height = max(child_height, max_height)
     }
     h_border := panel.border.t + panel.border.b

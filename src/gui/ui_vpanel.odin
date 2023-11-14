@@ -15,19 +15,18 @@ vpanel_create :: proc(parent: ^Element, flags: Element_Flags = {}) -> ^VPanel {
 }
 
 @(private="file")
-vpanel_message :: proc(element: ^Element, message: Message, di: int, dp: rawptr) -> int {
+vpanel_message :: proc(element: ^Element, message: Msg) -> int {
     panel := cast(^VPanel) element
-    #partial switch message {
-        case .Paint:
-            painter := cast(^Painter) dp
-            paint_box(painter, panel.bounds, 0x000000)
-        case .Layout:
+    #partial switch msg in message {
+        case Msg_Paint:
+            paint_box(msg, panel.bounds, 0x000000)
+        case Msg_Layout:
             vpanel_layout(panel, panel.bounds)
             element_repaint(panel)
-        case .Layout_Get_Width:
+        case Msg_Preferred_Width:
             return vpanel_max_width(panel)
-        case .Layout_Get_Height:
-            return vpanel_layout(panel, rect_make(0, 0, di, 0), just_measure = true)
+        case Msg_Preferred_Height:
+            return vpanel_layout(panel, rect_make(0, 0, (msg.width.? or_else 0), 0), just_measure = true)
     }
     return 0
 }
@@ -49,7 +48,7 @@ vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> in
         if .Element_VFill in child.flags {
             fill += 1
         } else if available > 0 {
-            height := element_message(child, .Layout_Get_Height, h_space)
+            height := element_message(child, Msg_Preferred_Height{width = h_space})
             available -= height
         }
     }
@@ -70,15 +69,15 @@ vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> in
             width = h_space
         } else {
             if .Element_VFill in child.flags {
-                width = element_message(child, .Layout_Get_Width, per_fill)
+                width = element_message(child, Msg_Preferred_Width{height = per_fill})
             } else {
-                width = element_message(child, .Layout_Get_Width, 0)
+                width = element_message(child, Msg_Preferred_Width{})
             }
         }
         if .Element_VFill in child.flags {
-            height = element_message(child, .Layout_Get_Height, per_fill)
+            height = element_message(child, Msg_Preferred_Height{width = per_fill})
         } else {
-            height = element_message(child, .Layout_Get_Height, width)
+            height = element_message(child, Msg_Preferred_Height{width = width})
             fmt.printf("Want height: %d\n", height)
         }
         rect := rect_make(
@@ -104,7 +103,7 @@ vpanel_max_width :: proc(panel: ^VPanel) -> int {
         if .Element_Destroy in child.flags {
             continue
         }
-        child_width := element_message(child, .Layout_Get_Width, 0)
+        child_width := element_message(child, Msg_Preferred_Width{})
         max_width = max(child_width, max_width)
     }
     return max_width + panel.border.t + panel.border.b

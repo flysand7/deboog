@@ -82,10 +82,10 @@ close_window :: proc(window: ^Window) {
 }
 
 @(private)
-_window_message_proc :: proc(element: ^Element, message: Message, di: int, dp: rawptr)->int {
+_window_message_proc :: proc(element: ^Element, message: Msg)->int {
     window := cast(^Window) element
-    #partial switch message {
-        case .Layout:
+    #partial switch msg in message {
+        case Msg_Layout:
             if len(window.children) > 0 {
                 element_move(window.children[0], window.bounds, false)
                 element_repaint(window)
@@ -96,52 +96,57 @@ _window_message_proc :: proc(element: ^Element, message: Message, di: int, dp: r
 }
 
 @(private)
-_window_input_event :: proc(window: ^Window, message: Message, di: int = 0, dp: rawptr = nil) -> int {
+_window_input_event :: proc(window: ^Window, message: Msg) -> int {
+    
     if window.pressed != nil {
-        if message == .Mouse_Move {
-            element_message(window.pressed, .Mouse_Drag, di, dp)
-        } else if message == .Mouse_Left_Release {
-            if window.hovered == window.pressed {
-                element_message(window.pressed, .Mouse_Clicked, di, dp)
+        if input,ok := message.(Msg_Input); ok {
+            if input == .Move {
+                element_message(window.pressed, Msg_Input.Drag)
+            } else if input == .Left_Release {
+                if window.hovered == window.pressed {
+                    element_message(window.pressed, Msg_Input.Clicked)
+                }
+                element_message(window.pressed, message)
+                _window_set_pressed(window, nil, .Left)
+            } else if input == .Middle_Release {
+                element_message(window.pressed, message)
+                _window_set_pressed(window, nil, .Middle)
+            } else if message == .Right_Release {
+                element_message(window.pressed, message)
+                _window_set_pressed(window, nil, .Right)
             }
-            element_message(window.pressed, message, di, dp)
-            _window_set_pressed(window, nil, .Left)
-        } else if message == .Mouse_Middle_Release {
-            element_message(window.pressed, message, di, dp)
-            _window_set_pressed(window, nil, .Middle)
-        } else if message == .Mouse_Right_Release {
-            element_message(window.pressed, message, di, dp)
-            _window_set_pressed(window, nil, .Right)
         }
     }
     if window.pressed != nil {
         is_inside := rect_contains(window.pressed.clip, window.cursor_x, window.cursor_y)
         if is_inside && window.hovered == window {
             window.hovered = window.pressed
-            element_message(window.pressed, .Update, cast(int) Update_Kind.Hovered)
+            element_message(window.pressed, Msg_Input.Hovered)
         } else if !is_inside && window.hovered == window.pressed {
             window.hovered = window
-            element_message(window.pressed, .Update, cast(int) Update_Kind.Hovered)
+            element_message(window.pressed, Msg_Input.Hovered)
         }
     } else {
         hovered := element_find(window, window.cursor_x, window.cursor_y)
-        if message == .Mouse_Move {
-            element_message(hovered, .Mouse_Move)
-        } else if message == .Mouse_Left_Press {
-            _window_set_pressed(window, hovered, .Left)
-            element_message(hovered, message, di, dp)
-        } else if message == .Mouse_Middle_Press {
-            _window_set_pressed(window, hovered, .Right)
-            element_message(hovered, message, di, dp)
-        } else if message == .Mouse_Right_Press {
-            _window_set_pressed(window, hovered, .Middle)
-            element_message(hovered, message, di, dp)
+        if input, ok := message.(Msg_Input); ok {
+            if input == .Move {
+                element_message(hovered, Msg_Input.Move)
+            } else if input == .Left_Press {
+                _window_set_pressed(window, hovered, .Left)
+                element_message(hovered, message)
+            } else if message == .Middle_Press {
+                _window_set_pressed(window, hovered, .Right)
+                element_message(hovered, message)
+            } else if message == .Middle_Release {
+                _window_set_pressed(window, hovered, .Middle)
+                element_message(hovered, message)
+            }
         }
         if hovered != window.hovered {
             prev_hovered := window.hovered
             window.hovered = hovered
-            element_message(prev_hovered, .Update, cast(int) Update_Kind.Hovered)
-            element_message(window.hovered, .Update, cast(int) Update_Kind.Hovered)
+            element_message(prev_hovered, Msg_Input.Hovered)
+            element_message(window.hovered, Msg_Input.Hovered)
         }
     }
     _update_all()
@@ -154,10 +159,10 @@ _window_set_pressed :: proc(window: ^Window, element: ^Element, button: Mouse_Bu
     window.pressed = element
     window.button = button
     if previous != nil {
-        element_message(previous, .Update, cast(int) Update_Kind.Pressed)
+        element_message(previous, Msg_Input.Pressed)
     }
     if element != nil {
-        element_message(element, .Update, cast(int) Update_Kind.Pressed)
+        element_message(element, Msg_Input.Pressed)
     }
 }
 

@@ -16,30 +16,29 @@ text_view_create :: proc(parent: ^Element, flags: Element_Flags, text: string) -
 }
 
 @(private="file")
-text_view_message :: proc(element: ^Element, message: Message, di: int, dp: rawptr) -> int {
+text_view_message :: proc(element: ^Element, message: Msg) -> int {
     text_view := cast(^Text_View) element
-    #partial switch message {
-        case .Destroy:
+    #partial switch msg in message {
+        case Msg_Destroy:
             delete(text_view.text)
-        case .Paint:
-            painter := cast(^Painter) dp
+        case Msg_Paint:
             text_bounds := element.bounds
             text := text_view.text
             for line in strings.split_lines_iterator(&text) {
-                paint_string(painter, text_bounds, line, u32(0xffffff), false, false)
+                paint_string(msg, text_bounds, line, u32(0xffffff), false, false)
                 text_bounds.t += GLYPH_HEIGHT
             }
-        case .Layout_Get_Width:
-            if di == 0 {
-                return 10
+        case Msg_Preferred_Width:
+            if height, ok := msg.height.?; ok {
+                return text_calc_width_given_height(text_view.text, height)
             } else {
-                return text_calc_width_given_height(text_view.text, di)
+                return 10
             }
-        case .Layout_Get_Height:
-            if di == 0 {
-                return 10
+        case Msg_Preferred_Height:
+            if width, ok := msg.width.?; ok {
+                return text_calc_height_given_width(text_view.text, width)
             } else {
-                return text_calc_height_given_width(text_view.text, di)
+                return 10
             }
     }
     return 0
