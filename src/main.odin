@@ -18,6 +18,8 @@ button_msg :: proc(element: ^gui.Element, message: gui.Msg)->int {
     return 0
 }
 
+import "core:fmt"
+
 main :: proc () {
     context.logger = logger_new(.Debug, os.stream_from_handle(os.stdout), "main")
     log.debugf("Logger set up!")
@@ -35,11 +37,13 @@ main :: proc () {
     hpanel2.gap = 50
     gui.label_create(hpanel2, {}, "Check this out:")
     gui.checkbox_create(hpanel2, {}, true)
-    // Third hpanel
+    // Third vpanel
     vpanel2 := gui.vpanel_create(vpanel, {.Element_HFill})
+    fmt.printf("Dynarr: %v\n", &vpanel.children[0])
     bytes, ok := os.read_entire_file("src/gui/gui_window.odin")
     assert(ok, "File couldn't be loaded")
     gui.text_view_create(vpanel2, {.Element_HFill}, cast(string) bytes)
+    fmt.printf("Dynarr: %v\n", &vpanel.children[0])
     button.msg_user = button_msg
     gui.message_loop()
 }
