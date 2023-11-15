@@ -39,7 +39,6 @@ main :: proc () {
     gui.checkbox_create(hpanel2, {}, true)
     // Third vpanel
     vpanel2 := gui.vpanel_create(vpanel, {.Element_HFill})
-    fmt.printf("Dynarr: %v\n", &vpanel.children[0])
     bytes, ok := os.read_entire_file("src/gui/gui_window.odin")
     assert(ok, "File couldn't be loaded")
     gui.text_view_create(vpanel2, {.Element_HFill}, cast(string) bytes)

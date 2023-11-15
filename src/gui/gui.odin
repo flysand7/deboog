@@ -119,11 +119,11 @@ rect_size :: proc(r: Rect) -> Vec {
     }
 }
 
-quad_make4 :: proc(l: int, r: int, t: int, b: int) -> Quad {
+quad_make4 :: proc(l: int, t: int, r: int, b: int) -> Quad {
     return Quad {
         l = l,
-        r = r,
         t = t,
+        r = r,
         b = b,
     }
 }
@@ -131,9 +131,9 @@ quad_make4 :: proc(l: int, r: int, t: int, b: int) -> Quad {
 quad_make2 :: proc(x: int, y: int) -> Quad {
     return Quad {
         l = x,
+        t = y,
         r = x,
-        t = x,
-        b = x,
+        b = y,
     }
 }
 

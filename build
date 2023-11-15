@@ -1,11 +1,11 @@
 #!/bin/bash
 
-odin build src \
-    -debug \
-    -vet \
-    -strict-style \
-    -no-threaded-checker \
-    -terse-errors \
-    -max-error-count:5 \
+odin build src                 \
+    -debug                     \
+    -vet                       \
+    -strict-style              \
+    -no-threaded-checker       \
+    -terse-errors              \
+    -max-error-count:5         \
     -collection:pesticider=src \
     -out:pesticider

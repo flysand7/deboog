@@ -20,10 +20,10 @@ paint_box :: proc(painter: ^Painter, bounds: Rect, color: u32) {
 
 paint_rect :: proc(painter: ^Painter, bounds: Rect, bg: u32, fg: u32) {
     paint_box(painter, bounds, bg)
-    paint_box(painter, rect_make(bounds.l, bounds.t, bounds.r, bounds.t+1), fg)
-    paint_box(painter, rect_make(bounds.l, bounds.t, bounds.l+1, bounds.b), fg)
-    paint_box(painter, rect_make(bounds.l, bounds.b-1, bounds.r, bounds.b), fg)
-    paint_box(painter, rect_make(bounds.r-1, bounds.t, bounds.r, bounds.b), fg)
+    paint_box(painter, rect_make(bounds.l,   bounds.t,   bounds.r,   bounds.t+1), fg)
+    paint_box(painter, rect_make(bounds.l,   bounds.t,   bounds.l+1, bounds.b),   fg)
+    paint_box(painter, rect_make(bounds.l,   bounds.b-1, bounds.r,   bounds.b),   fg)
+    paint_box(painter, rect_make(bounds.r-1, bounds.t,   bounds.r,   bounds.b),   fg)
 }
 
 paint_string :: proc(painter: ^Painter, bounds: Rect, str: string, color: u32, hcenter := true, vcenter := true) {
@@ -31,10 +31,10 @@ paint_string :: proc(painter: ^Painter, bounds: Rect, str: string, color: u32, h
     x := bounds.l
     y := bounds.t
     if vcenter {
-        y = (bounds.b - bounds.t - GLYPH_HEIGHT) / 2 + bounds.t
+        y = (rect_size_y(bounds) - GLYPH_HEIGHT) / 2 + bounds.t
     }
     if hcenter {
-        x = (bounds.r - bounds.l - GLYPH_WIDTH*len(str)) / 2 + bounds.l
+        x = (rect_size_x(bounds) - GLYPH_WIDTH*len(str)) / 2 + bounds.l
     }
     // NOTE(flysand): We're not printing unicode so no reason to use foreach-style loop.
     for str_idx in 0 ..< len(str) {

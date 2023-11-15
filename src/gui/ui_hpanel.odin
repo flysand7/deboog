@@ -34,9 +34,9 @@ hpanel_message :: proc(element: ^Element, message: Msg) -> int {
 @(private="file")
 hpanel_layout :: proc(panel: ^HPanel, bounds: Rect, just_measure := false) -> int {
     position := panel.border.l
-    h_space  := rect_size_x(bounds) - quad_size_x(panel.border)
-    v_space  := rect_size_y(bounds) - quad_size_y(panel.border)
-    available := h_space
+    space_x  := rect_size_x(bounds) - quad_size_x(panel.border)
+    space_y  := rect_size_y(bounds) - quad_size_y(panel.border)
+    available := space_x
     fill     := 0
     for child in panel.children {
         if .Element_Destroy in child.flags {
@@ -45,7 +45,7 @@ hpanel_layout :: proc(panel: ^HPanel, bounds: Rect, just_measure := false) -> in
         if .Element_HFill in child.flags {
             fill += 1
         } else if available > 0 {
-            width := element_message(child, Msg_Preferred_Width{height = v_space})
+            width := element_message(child, Msg_Preferred_Width{height = space_y})
             available -= width
         }
     }
@@ -65,9 +65,9 @@ hpanel_layout :: proc(panel: ^HPanel, bounds: Rect, just_measure := false) -> in
         width := element_message(child, Msg_Preferred_Width{height = height})
         rect := rect_make(
             bounds.l + position,
-            bounds.t + (v_space - height) / 2 + bounds.t,
+            bounds.t + (space_y - height) / 2,
             bounds.l + width + position,
-            bounds.t + (v_space + height) / 2 + bounds.t)
+            bounds.t + (space_y + height) / 2)
         if !just_measure {
             element_move(child, rect, false)
         }

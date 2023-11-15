@@ -91,8 +91,7 @@ vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> in
     // Check to see if we need a scrollbar and make a space for it.
     if !just_measure {
         if total_y > space_y {
-            scrollbar := cast(^Scrollbar) &panel.children[0]
-            fmt.printf("Scrollbar: %p, window: %p\n", scrollbar, scrollbar.window)
+            scrollbar := cast(^Scrollbar) panel.children[0]
             if scrollbar.total != 0 {
                 // TODO(flysand): If the layout changed, we'll need to change the %
                 // of the space we had scrolled. In the future this needs to be done
@@ -159,5 +158,5 @@ vpanel_max_width :: proc(panel: ^VPanel) -> int {
         child_width := element_message(child, Msg_Preferred_Width{})
         max_width = max(child_width, max_width)
     }
-    return max_width + quad_size_y(panel.border)
+    return max_width + quad_size_x(panel.border)
 }
