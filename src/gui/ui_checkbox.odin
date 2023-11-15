@@ -22,7 +22,7 @@ checkbox_message :: proc(element: ^Element, message: Msg) -> int {
     #partial switch msg in message {
         case Msg_Preferred_Width, Msg_Preferred_Height:
             return 25
-        case Msg_Input_Click:
+        case Msg_Input_Clicked:
             checkbox.checked = !checkbox.checked
             new_color := checkbox.checked? u32(0x42c8f5) : u32(0x333333)
             animate(&checkbox.color, new_color, time.Second/6)

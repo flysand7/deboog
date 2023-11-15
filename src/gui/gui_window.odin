@@ -94,13 +94,15 @@ _window_input_event :: proc(window: ^Window, message: Msg) -> int {
         case Msg_Input_Move:
             element_message(window.pressed, Msg_Input_Drag{})
         case Msg_Input_Click:
-            if msg.button == .Left {
-                if window.hovered == window.pressed {
-                    element_message(window.pressed, Msg_Input_Clicked{})
+            if msg.action == .Release {
+                if msg.button == .Left {
+                    if window.hovered == window.pressed {
+                        element_message(window.pressed, Msg_Input_Clicked{})
+                    }
                 }
+                element_message(window.pressed, message)
+                _window_set_pressed(window, nil, msg.button)
             }
-            element_message(window.pressed, message)
-            _window_set_pressed(window, nil, msg.button)
         }
     }
     if window.pressed != nil {
@@ -117,15 +119,17 @@ _window_input_event :: proc(window: ^Window, message: Msg) -> int {
         #partial switch msg in message {
         case Msg_Input_Move:
             element_message(hovered, Msg_Input_Move{})
-            if hovered != window.hovered {
-                prev_hovered := window.hovered
-                window.hovered = hovered
-                element_message(prev_hovered, Msg_Input_Hovered{})
-                element_message(window.hovered, Msg_Input_Hovered{})
-            }
         case Msg_Input_Click:
-            _window_set_pressed(window, hovered, msg.button)
-            element_message(hovered, message)
+            if msg.action == .Press {
+                _window_set_pressed(window, hovered, msg.button)
+                element_message(hovered, message)
+            }
+        }
+        if hovered != window.hovered {
+            prev_hovered := window.hovered
+            window.hovered = hovered
+            element_message(prev_hovered, Msg_Input_Hovered{})
+            element_message(window.hovered, Msg_Input_Hovered{})
         }
     }
     _update_all()
