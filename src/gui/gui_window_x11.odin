@@ -96,7 +96,7 @@ _x11_message_loop :: proc() {
         event: xlib.XEvent
         for xlib.XPending(global.display) > 0 {
             xlib.XNextEvent(global.display, &event)
-            _x11_handle_event(event)
+            _x11_handle_event(&event)
         }
         if animation_counter >= ANIMATION_FREQUENCY {
             if animation_tick(animation_counter) {
@@ -126,7 +126,7 @@ _x11_end_paint :: proc(window: ^Window) {
 }
 
 @(private)
-_x11_handle_event :: proc(#by_ptr event: xlib.XEvent) {
+_x11_handle_event :: proc(event: ^xlib.XEvent) {
     #partial switch event.type {
     case .ClientMessage:
         if cast(xlib.Atom) event.xclient.data.l[0] == global.wm_delete {
