@@ -41,7 +41,7 @@ Msg_Input_Move :: struct{}
 Msg_Input_Drag :: struct{}
 
 Msg_Input_Clicked :: struct{
-    // TODO: The location of the click?
+    pos: Vec,
 }
 
 Msg_Input_Pressed :: struct{

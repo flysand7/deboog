@@ -97,7 +97,7 @@ _window_input_event :: proc(window: ^Window, message: Msg) -> int {
             if msg.action == .Release {
                 if msg.button == .Left {
                     if window.hovered == window.pressed {
-                        element_message(window.pressed, Msg_Input_Clicked{})
+                        element_message(window.pressed, Msg_Input_Clicked{pos = window.cursor})
                     }
                 }
                 element_message(window.pressed, message)
