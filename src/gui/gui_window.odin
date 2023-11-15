@@ -39,12 +39,6 @@ Window :: struct {
     button:   Mouse_Button,
 }
 
-Mouse_Button :: enum {
-    Left,
-    Middle,
-    Right,
-}
-
 initialize :: proc() {
     _platform_initialize()
 }
@@ -98,54 +92,42 @@ _window_message_proc :: proc(element: ^Element, message: Msg)->int {
 @(private)
 _window_input_event :: proc(window: ^Window, message: Msg) -> int {
     if window.pressed != nil {
-        if input,ok := message.(Msg_Input); ok {
-            if input == .Move {
-                element_message(window.pressed, Msg_Input.Drag)
-            } else if input == .Left_Release {
+        #partial switch msg in message {
+        case Msg_Input_Move:
+            element_message(window.pressed, Msg_Input_Drag{})
+        case Msg_Input_Click:
+            if msg.button == .Left {
                 if window.hovered == window.pressed {
-                    element_message(window.pressed, Msg_Input.Clicked)
+                    element_message(window.pressed, Msg_Input_Clicked{})
                 }
-                element_message(window.pressed, message)
-                _window_set_pressed(window, nil, .Left)
-            } else if input == .Middle_Release {
-                element_message(window.pressed, message)
-                _window_set_pressed(window, nil, .Middle)
-            } else if message == .Right_Release {
-                element_message(window.pressed, message)
-                _window_set_pressed(window, nil, .Right)
             }
+            element_message(window.pressed, message)
+            _window_set_pressed(window, nil, msg.button)
         }
     }
     if window.pressed != nil {
         is_inside := rect_contains(window.pressed.clip, window.cursor_x, window.cursor_y)
         if is_inside && window.hovered == window {
             window.hovered = window.pressed
-            element_message(window.pressed, Msg_Input.Hovered)
+            element_message(window.pressed, Msg_Input_Hovered{})
         } else if !is_inside && window.hovered == window.pressed {
             window.hovered = window
-            element_message(window.pressed, Msg_Input.Hovered)
+            element_message(window.pressed, Msg_Input_Hovered{})
         }
     } else {
         hovered := element_find(window, window.cursor_x, window.cursor_y)
-        if input, ok := message.(Msg_Input); ok {
-            if input == .Move {
-                element_message(hovered, Msg_Input.Move)
-            } else if input == .Left_Press {
-                _window_set_pressed(window, hovered, .Left)
-                element_message(hovered, message)
-            } else if message == .Middle_Press {
-                _window_set_pressed(window, hovered, .Right)
-                element_message(hovered, message)
-            } else if message == .Middle_Release {
-                _window_set_pressed(window, hovered, .Middle)
-                element_message(hovered, message)
+        #partial switch msg in message {
+        case Msg_Input_Move:
+            element_message(hovered, Msg_Input_Move{})
+            if hovered != window.hovered {
+                prev_hovered := window.hovered
+                window.hovered = hovered
+                element_message(prev_hovered, Msg_Input_Hovered{})
+                element_message(window.hovered, Msg_Input_Hovered{})
             }
-        }
-        if hovered != window.hovered {
-            prev_hovered := window.hovered
-            window.hovered = hovered
-            element_message(prev_hovered, Msg_Input.Hovered)
-            element_message(window.hovered, Msg_Input.Hovered)
+        case Msg_Input_Click:
+            _window_set_pressed(window, hovered, msg.button)
+            element_message(hovered, message)
         }
     }
     _update_all()
@@ -158,10 +140,10 @@ _window_set_pressed :: proc(window: ^Window, element: ^Element, button: Mouse_Bu
     window.pressed = element
     window.button = button
     if previous != nil {
-        element_message(previous, Msg_Input.Pressed)
+        element_message(previous, Msg_Input_Pressed{})
     }
     if element != nil {
-        element_message(element, Msg_Input.Pressed)
+        element_message(element, Msg_Input_Pressed{})
     }
 }
 

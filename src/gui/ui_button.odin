@@ -33,7 +33,7 @@ _button_message :: proc (element: ^Element, message: Msg) -> int {
                         color_fg_normal
             paint_rect(msg, button.bounds, color_bg_normal, color_fg)
             paint_string(msg, button.bounds, button.text, color_fg)
-        case Msg_Input:
+        case Msg_Input_Hovered, Msg_Input_Pressed:
             element_repaint(button, nil)
         case Msg_Preferred_Width:
             return 30 + len(button.text) * GLYPH_WIDTH

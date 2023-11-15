@@ -26,29 +26,49 @@ Msg_Preferred_Height :: struct {
     width: Maybe(int),
 }
 
-// TODO(flysand): This needs to be refactored into a struct
-// Containing the relevant input Message.
-Msg_Input :: enum {
-    Move,
-    Drag,
-    Clicked,
-    Left_Press,
-    Left_Release,
-    Middle_Press,
-    Middle_Release,
-    Right_Press,
-    Right_Release,
-    Hovered,
-    Pressed,
+Mouse_Button :: enum {
+    Left,
+    Middle,
+    Right,
+}
+
+Mouse_Action :: enum {
+    Press,
+    Release,
+}
+
+Msg_Input_Move :: struct{}
+Msg_Input_Drag :: struct{}
+
+Msg_Input_Clicked :: struct{
+    // TODO: The location of the click?
+}
+
+Msg_Input_Pressed :: struct{
+    // TODO: The location of the mouse press?
+}
+
+Msg_Input_Hovered :: struct {
+    // TODO: Element-relative coordinates of the mouse
+}
+
+Msg_Input_Click :: struct {
+    button: Mouse_Button,
+    action: Mouse_Action,
 }
 
 Msg :: union {
     // Element is expected to free all if its associated data.
     Msg_Destroy,
-    // Element uses this to react to it's state changes and update state
+    // Element uses these to react to it's state changes and update state
     // in accordance to that. For example button can react to the hover event,
     // change it's background color and redraw itself.
-    Msg_Input,
+    Msg_Input_Move,
+    Msg_Input_Drag,
+    Msg_Input_Clicked,
+    Msg_Input_Pressed,
+    Msg_Input_Hovered,
+    Msg_Input_Click,
     // In response to this event the element must issue draw commands to draw
     // itself.
     Msg_Paint,

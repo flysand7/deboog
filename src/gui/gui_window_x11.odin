@@ -183,7 +183,7 @@ _x11_handle_event :: proc(#by_ptr event: xlib.XEvent) {
         }
         window.cursor_x = cast(int) event.xmotion.x
         window.cursor_y = cast(int) event.xmotion.y
-        _window_input_event(window, Msg_Input.Move)
+        _window_input_event(window, Msg_Input_Move{})
     case .LeaveNotify:
         window := _x11_find_window(event.xmotion.window)
         if window == nil {
@@ -193,7 +193,7 @@ _x11_handle_event :: proc(#by_ptr event: xlib.XEvent) {
             window.cursor_x = -1
             window.cursor_y = -1
         }
-        _window_input_event(window, Msg_Input.Move)
+        _window_input_event(window, Msg_Input_Move{})
     case .ButtonPress, .ButtonRelease:
         window := _x11_find_window(event.xbutton.window)
         if window == nil {
@@ -201,20 +201,17 @@ _x11_handle_event :: proc(#by_ptr event: xlib.XEvent) {
         }
         window.cursor_x = cast(int) event.xbutton.x
         window.cursor_y = cast(int) event.xbutton.y
-        button := event.xbutton.button
-        if event.type == .ButtonPress {
-            #partial switch button {
-                case .Button1: _window_input_event(window, Msg_Input.Left_Press)
-                case .Button2: _window_input_event(window, Msg_Input.Middle_Press)
-                case .Button3: _window_input_event(window, Msg_Input.Right_Press)
-            }
-        } else {
-            #partial switch button {
-                case .Button1: _window_input_event(window, Msg_Input.Left_Release)
-                case .Button2: _window_input_event(window, Msg_Input.Middle_Release)
-                case .Button3: _window_input_event(window, Msg_Input.Right_Release)
-            }
+        button: Mouse_Button
+        action: Mouse_Action = event.type == .ButtonPress? .Press : .Release
+        #partial switch event.xbutton.button {
+            case .Button1: button = .Left
+            case .Button2: button = .Middle
+            case .Button3: button = .Right
         }
+        _window_input_event(window, Msg_Input_Click{
+            action = action,
+            button = button,
+        })
     }
 }
 

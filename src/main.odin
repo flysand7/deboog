@@ -12,7 +12,7 @@ import "gui"
 
 button_msg :: proc(element: ^gui.Element, message: gui.Msg)->int {
     #partial switch msg in message {
-        case gui.Msg_Input:
+        case gui.Msg_Input_Clicked:
             log.debugf("Button press!")
     }
     return 0
@@ -37,7 +37,9 @@ main :: proc () {
     gui.checkbox_create(hpanel2, {}, true)
     // Third hpanel
     vpanel2 := gui.vpanel_create(vpanel, {.Element_HFill})
-    gui.text_view_create(vpanel2, {.Element_HFill}, "Hello, world, I'm text!\nSeocnd line of text!\nThird??")
+    bytes, ok := os.read_entire_file("src/gui/gui_window.odin")
+    assert(ok, "File couldn't be loaded")
+    gui.text_view_create(vpanel2, {.Element_HFill}, cast(string) bytes)
     button.msg_user = button_msg
     gui.message_loop()
 }
