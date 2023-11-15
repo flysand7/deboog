@@ -59,8 +59,6 @@ text_calc_width_given_height :: proc(text: string, height: int) -> int {
     return max_line_width * GLYPH_WIDTH
 }
 
-import "core:fmt"
-
 @(private="file")
 text_calc_height_given_width :: proc(text: string, width: int) -> int {
     lines_count := 1
@@ -68,6 +66,5 @@ text_calc_height_given_width :: proc(text: string, width: int) -> int {
     for _ in strings.split_lines_iterator(&text) {
         lines_count += 1
     }
-    fmt.printf("Found lines: %d\n", lines_count)
     return lines_count * GLYPH_HEIGHT
 }

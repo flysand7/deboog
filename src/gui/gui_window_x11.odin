@@ -186,7 +186,7 @@ _x11_handle_event :: proc(#by_ptr event: xlib.XEvent) {
         }
         window.cursor.x = cast(int) event.xmotion.x
         window.cursor.y = cast(int) event.xmotion.y
-        _window_input_event(window, Msg_Input_Move{})
+        _window_input_event(window, Msg_Input_Move{window.cursor})
     case .LeaveNotify:
         window := _x11_find_window(event.xmotion.window)
         if window == nil {

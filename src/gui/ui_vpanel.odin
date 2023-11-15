@@ -15,16 +15,48 @@ scrollbar_create :: proc(parent: ^Element, flags: Element_Flags = {}) -> ^Scroll
     return scrollbar
 }
 
+SCROLL_SPINDLE_HEIGHT :: 20
+
 @(private="file")
 scrollbar_message :: proc(element: ^Element, message: Msg) -> int {
     scrollbar := cast(^Scrollbar) element
     #partial switch msg in message {
+    case Msg_Input_Clicked:
+        percentage := cast(f32)(msg.pos.y - element.bounds.t) / cast(f32) rect_size_y(scrollbar.bounds)
+        if percentage < 0 {
+            percentage = 0
+        } else if percentage > 1 {
+            percentage = 1
+        }
+        scrollbar.scroll = cast(int) (percentage * cast(f32) scrollbar.total)
+        // element_repaint(scrollbar)
+        element_message(scrollbar.parent, Msg_Layout{})
     case Msg_Input_Drag:
-        fmt.printf("Scrollbar dragging.\n")
+        percentage := cast(f32)(msg.pos.y - element.bounds.t) / cast(f32) rect_size_y(scrollbar.bounds)
+        if percentage < 0 {
+            percentage = 0
+        } else if percentage > 1 {
+            percentage = 1
+        }
+        scrollbar.scroll = cast(int) (percentage * cast(f32) scrollbar.total)
+        // element_repaint(scrollbar)
+        element_message(scrollbar.parent, Msg_Layout{})
     case Msg_Paint:
+        percentage := scrollbar_percentage(scrollbar)
+        offset_y := scrollbar.bounds.t + cast(int) (cast(f32) rect_size_y(scrollbar.bounds) * percentage)
         paint_box(msg, scrollbar.bounds, 0xffffff)
+        paint_box(msg, rect_make4(scrollbar.bounds.l, offset_y, scrollbar.bounds.r, offset_y + SCROLL_SPINDLE_HEIGHT), 0xff0000)
     }
     return 0
+}
+
+@(private="file")
+scrollbar_percentage :: proc(scrollbar: ^Scrollbar) -> f32 {
+    if scrollbar.total != 0.0 {
+        return f32(scrollbar.scroll) / f32(scrollbar.total)
+    } else {
+        return 0.0
+    }
 }
 
 VPanel :: struct {
@@ -38,7 +70,6 @@ vpanel_create :: proc(parent: ^Element, flags: Element_Flags = {}) -> ^VPanel {
     panel.msg_class = vpanel_message
     // Create a child scrollbar. The panel will always have it
     // as its first child.
-    fmt.printf("Scrollbar parent: %p, window: %p\n", parent, parent.window)
     _ = scrollbar_create(panel)
     return panel
 }
@@ -62,7 +93,6 @@ vpanel_message :: proc(element: ^Element, message: Msg) -> int {
 
 SCROLLBAR_WIDTH :: 20
 
-import "core:fmt"
 @(private="file")
 vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> int {
     position := panel.border.t
@@ -92,15 +122,14 @@ vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> in
     if !just_measure {
         if total_y > space_y {
             scrollbar := cast(^Scrollbar) panel.children[0]
-            if scrollbar.total != 0 {
+            if scrollbar.total != total_y {
                 // TODO(flysand): If the layout changed, we'll need to change the %
                 // of the space we had scrolled. In the future this needs to be done
                 // in a different way where we use offsets to particular elements to
                 // see what had changed.
-                pct := cast(f32) scrollbar.scroll / cast(f32) scrollbar.total
-                scrollbar.scroll = cast(int) (f32(space_y) * pct)
+                scrollbar.scroll = cast(int) (f32(total_y) * scrollbar_percentage(scrollbar))
             }
-            scrollbar.total = space_y
+            scrollbar.total = total_y
             scrollbar_bounds := Rect {
                 l = bounds.r - SCROLLBAR_WIDTH,
                 t = bounds.t,
@@ -130,14 +159,14 @@ vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> in
             height = element_message(child, Msg_Preferred_Height{width = per_fill})
         } else {
             height = element_message(child, Msg_Preferred_Height{width = width})
-            fmt.printf("Want height: %d\n", height)
         }
-        rect := rect_make(
-            bounds.l + panel.border.l + (space_x - width)/2,
-            bounds.t + position,
-            bounds.l + panel.border.l + (space_x + width)/2,
-            bounds.t + height + position)
         if !just_measure {
+            scrollbar := cast(^Scrollbar) panel.children[0]
+            rect := rect_make(
+                bounds.l + panel.border.l + (space_x - width)/2,
+                bounds.t + position - scrollbar.scroll,
+                bounds.l + panel.border.l + (space_x + width)/2,
+                bounds.t + position - scrollbar.scroll + height)
             element_move(child, rect, false)
         }
         position += height + panel.gap

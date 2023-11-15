@@ -92,7 +92,7 @@ _window_input_event :: proc(window: ^Window, message: Msg) -> int {
     if window.pressed != nil {
         #partial switch msg in message {
         case Msg_Input_Move:
-            element_message(window.pressed, Msg_Input_Drag{})
+            element_message(window.pressed, Msg_Input_Drag{window.cursor})
         case Msg_Input_Click:
             if msg.action == .Release {
                 if msg.button == .Left {

@@ -37,10 +37,15 @@ Mouse_Action :: enum {
     Release,
 }
 
-Msg_Input_Move :: struct{}
-Msg_Input_Drag :: struct{}
-
 Msg_Input_Clicked :: struct{
+    pos: Vec,
+}
+
+Msg_Input_Drag :: struct{
+    pos: Vec,
+}
+
+Msg_Input_Move :: struct{
     pos: Vec,
 }
 
