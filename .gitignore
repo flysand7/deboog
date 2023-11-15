@@ -1,6 +1,7 @@
 
-# Odin language server config.
+# Editor/environment-specific stuff.
 /ols.json
+/.vscode
 
 # The main executable
 /pesticider
