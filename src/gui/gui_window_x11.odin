@@ -26,12 +26,12 @@ _x11_initialize :: proc() {
 }
 
 @(private)
-_x11_window_create :: proc(title: cstring, width, height: int, flags: Element_Flags) -> ^Window {
+_x11_window_create :: proc(title: cstring, size_x, size_y: int, flags: Element_Flags) -> ^Window {
     window := element_create(nil, Window, flags)
     append(&global.windows, window)
     // Set up the properties of window
-    window.width = width
-    window.height = height
+    window.size.x = size_x
+    window.size.y = size_y
     window.msg_class = _window_message_proc
     window.window = window
     // Initialize attributes
@@ -44,7 +44,7 @@ _x11_window_create :: proc(title: cstring, width, height: int, flags: Element_Fl
     window.handle = xlib.XCreateWindow(
         global.display,
         global.root,
-        0, 0, cast(u32) width, cast(u32) height,
+        0, 0, cast(u32) size_x, cast(u32) size_y,
         0, 0,
         .InputOutput,
         global.visual,
@@ -148,8 +148,8 @@ _x11_handle_event :: proc(#by_ptr event: xlib.XEvent) {
             gc,
             window.image,
             0, 0, 0, 0,
-            cast(u32) window.width,
-            cast(u32) window.height,
+            cast(u32) window.size.x,
+            cast(u32) window.size.y,
         )
     case .ConfigureNotify:
         window: ^Window = _x11_find_window(event.xconfigure.window)
@@ -157,23 +157,26 @@ _x11_handle_event :: proc(#by_ptr event: xlib.XEvent) {
             global.close = true
             return
         }
-        new_width := cast(int) event.xconfigure.width
-        new_height := cast(int) event.xconfigure.height
-        if window.width != new_width || window.height != new_height {
-            window.width = new_width
-            window.height = new_height
-            resize(&window.pixels, new_width * new_height * size_of(u32))
+        new_size := Vec {
+            cast(int) event.xconfigure.width,
+            cast(int) event.xconfigure.height,
+        }
+        if window.size != new_size {
+            window.size = new_size
+            resize(&window.pixels, new_size.x * new_size.y * size_of(u32))
             for &pixel in window.pixels {
                 pixel = 0
             }
-            window.image.width = cast(i32) new_width
-            window.image.height = cast(i32) new_height
-            window.image.bytes_per_line = cast(i32) (new_width * size_of(u32))
+            // Create a new canvas for the window to draw on.
+            window.image.width = cast(i32) new_size.x
+            window.image.height = cast(i32) new_size.y
+            window.image.bytes_per_line = cast(i32) (new_size.x * size_of(u32))
             window.image.data = cast([^]u8) raw_data(window.pixels)
             // Set new window bounds and send the Layout message.
-            window.bounds = rect_make2({0, 0}, {new_width, new_height})
-            window.clip = rect_make2({0, 0}, {new_width, new_height})
+            window.bounds = rect_make2({0, 0}, {new_size.x, new_size.y})
+            window.clip = rect_make2({0, 0}, {new_size.x, new_size.y})
             element_message(window, Msg_Layout{})
+            // Paint all elements on the new canvas.
             _update_all()
         }
     case .MotionNotify:
@@ -181,8 +184,8 @@ _x11_handle_event :: proc(#by_ptr event: xlib.XEvent) {
         if window == nil {
             return
         }
-        window.cursor_x = cast(int) event.xmotion.x
-        window.cursor_y = cast(int) event.xmotion.y
+        window.cursor.x = cast(int) event.xmotion.x
+        window.cursor.y = cast(int) event.xmotion.y
         _window_input_event(window, Msg_Input_Move{})
     case .LeaveNotify:
         window := _x11_find_window(event.xmotion.window)
@@ -190,8 +193,8 @@ _x11_handle_event :: proc(#by_ptr event: xlib.XEvent) {
             return
         }
         if window.pressed == nil {
-            window.cursor_x = -1
-            window.cursor_y = -1
+            window.cursor.x = -1
+            window.cursor.y = -1
         }
         _window_input_event(window, Msg_Input_Move{})
     case .ButtonPress, .ButtonRelease:
@@ -199,8 +202,8 @@ _x11_handle_event :: proc(#by_ptr event: xlib.XEvent) {
         if window == nil {
             return
         }
-        window.cursor_x = cast(int) event.xbutton.x
-        window.cursor_y = cast(int) event.xbutton.y
+        window.cursor.x = cast(int) event.xbutton.x
+        window.cursor.y = cast(int) event.xbutton.y
         button: Mouse_Button
         action: Mouse_Action = event.type == .ButtonPress? .Press : .Release
         #partial switch event.xbutton.button {

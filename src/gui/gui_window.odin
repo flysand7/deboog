@@ -29,11 +29,9 @@ Window :: struct {
     using element: Element,
     using _:  _Platform_Window,
     pixels:   [dynamic]u32,
-    width:    int,
-    height:   int,
+    size:     Vec,
     dirty:    Rect,
-    cursor_x: int,
-    cursor_y: int,
+    cursor:   Vec,
     hovered:  ^Element,
     pressed:  ^Element,
     button:   Mouse_Button,
@@ -43,8 +41,8 @@ initialize :: proc() {
     _platform_initialize()
 }
 
-window_create :: proc(title: cstring, width, height: int, flags: Element_Flags) -> ^Window {
-    return _platform_window_create(title, width, height, flags)
+window_create :: proc(title: cstring, size_x, size_y: int, flags: Element_Flags) -> ^Window {
+    return _platform_window_create(title, size_x, size_y, flags)
 }
 
 message_loop :: proc() {
@@ -106,7 +104,7 @@ _window_input_event :: proc(window: ^Window, message: Msg) -> int {
         }
     }
     if window.pressed != nil {
-        is_inside := rect_contains(window.pressed.clip, window.cursor_x, window.cursor_y)
+        is_inside := rect_contains(window.pressed.clip, window.cursor.x, window.cursor.y)
         if is_inside && window.hovered == window {
             window.hovered = window.pressed
             element_message(window.pressed, Msg_Input_Hovered{})
@@ -115,7 +113,7 @@ _window_input_event :: proc(window: ^Window, message: Msg) -> int {
             element_message(window.pressed, Msg_Input_Hovered{})
         }
     } else {
-        hovered := element_find(window, window.cursor_x, window.cursor_y)
+        hovered := element_find(window, window.cursor.x, window.cursor.y)
         #partial switch msg in message {
         case Msg_Input_Move:
             element_message(hovered, Msg_Input_Move{})
@@ -159,8 +157,7 @@ _update_all :: proc() {
             continue
         }
         painter: Painter
-        painter.width = window.width
-        painter.height = window.height
+        painter.size = window.size
         painter.pixels = cast([^]u32) raw_data(window.pixels)
         painter.clip = rect_intersect(window.bounds, window.dirty)
         _element_paint(window, &painter)

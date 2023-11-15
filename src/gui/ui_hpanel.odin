@@ -3,7 +3,7 @@ package gui
 
 HPanel :: struct {
     using element: Element,
-    border:        Rect,
+    border:        Quad,
     gap:           int,
 }
 
@@ -33,11 +33,9 @@ hpanel_message :: proc(element: ^Element, message: Msg) -> int {
 
 @(private="file")
 hpanel_layout :: proc(panel: ^HPanel, bounds: Rect, just_measure := false) -> int {
-    border1  := panel.border.l
-    border2  := panel.border.t
-    position := border1
-    h_space  := bounds.r - bounds.l - panel.border.r - panel.border.l
-    v_space  := bounds.b - bounds.t - panel.border.t - panel.border.b
+    position := panel.border.l
+    h_space  := rect_size_x(bounds) - quad_size_x(panel.border)
+    v_space  := rect_size_y(bounds) - quad_size_y(panel.border)
     available := h_space
     fill     := 0
     for child in panel.children {
@@ -67,9 +65,9 @@ hpanel_layout :: proc(panel: ^HPanel, bounds: Rect, just_measure := false) -> in
         width := element_message(child, Msg_Preferred_Width{height = height})
         rect := rect_make(
             bounds.l + position,
-            border2 + (v_space - height) / 2 + bounds.t,
+            bounds.t + (v_space - height) / 2 + bounds.t,
             bounds.l + width + position,
-            border2 + (v_space + height) / 2 + bounds.t)
+            bounds.t + (v_space + height) / 2 + bounds.t)
         if !just_measure {
             element_move(child, rect, false)
         }
@@ -78,7 +76,7 @@ hpanel_layout :: proc(panel: ^HPanel, bounds: Rect, just_measure := false) -> in
     if len(panel.children) > 0 {
         position -= panel.gap
     }
-    return position + border1
+    return position + panel.border.l
 }
 
 @(private="file")
@@ -91,6 +89,5 @@ hpanel_max_height :: proc(panel: ^HPanel) -> int {
         child_height := element_message(child, Msg_Preferred_Height{})
         max_height = max(child_height, max_height)
     }
-    h_border := panel.border.t + panel.border.b
-    return max_height + h_border
+    return max_height + quad_size_y(panel.border)
 }

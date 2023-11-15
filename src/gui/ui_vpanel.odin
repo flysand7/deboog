@@ -37,8 +37,8 @@ vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> in
     // TODO(flysand): Apparently we weren't taking into account the right/bottom
     // borders of the panel.
     position := panel.border.t
-    h_space  := bounds.r - bounds.l - quad_size_x(panel.border)
-    v_space  := bounds.b - bounds.t - quad_size_y(panel.border)
+    h_space  := rect_size_x(bounds) - quad_size_x(panel.border)
+    v_space  := rect_size_y(bounds) - quad_size_y(panel.border)
     available := v_space
     fill     := 0
     for child in panel.children {
@@ -106,5 +106,5 @@ vpanel_max_width :: proc(panel: ^VPanel) -> int {
         child_width := element_message(child, Msg_Preferred_Width{})
         max_width = max(child_width, max_width)
     }
-    return max_width + panel.border.t + panel.border.b
+    return max_width + quad_size_y(panel.border)
 }

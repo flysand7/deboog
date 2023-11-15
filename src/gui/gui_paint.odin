@@ -6,15 +6,14 @@ import "core:slice"
 Painter :: struct {
     clip:   Rect,
     pixels: [^]u32,
-    width:  int,
-    height: int,
+    size:   Vec,
 }
 
 paint_box :: proc(painter: ^Painter, bounds: Rect, color: u32) {
     rect := rect_intersect(bounds, painter.clip)
     for y in rect.t ..< rect.b {
         for x in rect.l ..< rect.r {
-            painter.pixels[x + y*painter.width] = color
+            painter.pixels[x + y*painter.size.x] = color
         }
     }
 }
@@ -49,7 +48,7 @@ paint_string :: proc(painter: ^Painter, bounds: Rect, str: string, color: u32, h
             byte := data[i - y]
             for j in char_rect.l ..< char_rect.r {
                 if (byte & (1 << cast(uint)(j - x))) != 0 {
-                    painter.pixels[i * painter.width + j] = color
+                    painter.pixels[i*painter.size.x + j] = color
                 }
             }
         }

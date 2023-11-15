@@ -1,7 +1,10 @@
 
 package gui
 
-Vec2i :: [2]int
+/*
+    Type for vectors.
+*/
+Vec :: [2]int
 
 /*
     Type for storing rectangles.
@@ -36,7 +39,7 @@ rect_make4 :: proc(l,t,r,b: int) -> Rect {
     return rect
 }
 
-rect_make2 :: proc(tl: Vec2i, br: Vec2i) -> Rect {
+rect_make2 :: proc(tl: Vec, br: Vec) -> Rect {
     rect: Rect
     rect.l = tl.x
     rect.t = tl.y
@@ -89,7 +92,7 @@ rect_contains_point :: proc(a: Rect, x, y: int) -> bool {
     return false
 }
 
-rect_contains_vec2i :: proc(a: Rect, v: Vec2i) -> bool {
+rect_contains_vec2i :: proc(a: Rect, v: Vec) -> bool {
     if a.l <= v.x && v.x < a.r && a.t <= v.y && v.y < a.b {
         return true
     }
@@ -99,6 +102,21 @@ rect_contains_vec2i :: proc(a: Rect, v: Vec2i) -> bool {
 rect_contains :: proc {
     rect_contains_point,
     rect_contains_vec2i,
+}
+
+rect_size_x :: proc(r: Rect) -> int {
+    return r.r - r.l
+}
+
+rect_size_y :: proc(r: Rect) -> int {
+    return r.b - r.t
+}
+
+rect_size :: proc(r: Rect) -> Vec {
+    return Vec {
+        r.r - r.l,
+        r.b - r.t,
+    }
 }
 
 quad_make4 :: proc(l: int, r: int, t: int, b: int) -> Quad {
@@ -142,7 +160,7 @@ quad_size_y :: proc(q: Quad) -> int {
     return q.t + q.b
 }
 
-quad_size :: proc(q: Quad) -> Vec2i {
+quad_size :: proc(q: Quad) -> Vec {
     return {
         q.l + q.r,
         q.t + q.b,
