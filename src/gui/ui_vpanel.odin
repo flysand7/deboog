@@ -3,7 +3,7 @@ package gui
 
 VPanel :: struct {
     using element: Element,
-    border:        Rect,
+    border:        Quad,
     gap:           int,
 }
 
@@ -34,11 +34,11 @@ vpanel_message :: proc(element: ^Element, message: Msg) -> int {
 import "core:fmt"
 @(private="file")
 vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> int {
-    border1  := panel.border.t
-    border2  := panel.border.l
-    position := border1
-    h_space  := bounds.r - bounds.l - panel.border.r - panel.border.l
-    v_space  := bounds.b - bounds.t - panel.border.t - panel.border.b
+    // TODO(flysand): Apparently we weren't taking into account the right/bottom
+    // borders of the panel.
+    position := panel.border.t
+    h_space  := bounds.r - bounds.l - quad_size_x(panel.border)
+    v_space  := bounds.b - bounds.t - quad_size_y(panel.border)
     available := v_space
     fill     := 0
     for child in panel.children {
@@ -81,9 +81,9 @@ vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> in
             fmt.printf("Want height: %d\n", height)
         }
         rect := rect_make(
-            border2 + (h_space - width)/2 + bounds.l,
+            bounds.l + panel.border.l + (h_space - width)/2,
             bounds.t + position,
-            border2 + (h_space + width)/2 + bounds.l,
+            bounds.l + panel.border.l + (h_space + width)/2,
             bounds.t + height + position)
         if !just_measure {
             element_move(child, rect, false)
@@ -93,7 +93,7 @@ vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> in
     if len(panel.children) > 0 {
         position -= panel.gap
     }
-    return position + border1
+    return position + panel.border.t
 }
 
 @(private="file")
