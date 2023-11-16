@@ -47,8 +47,8 @@ scrollbar_message :: proc(element: ^Element, message: Msg) -> int {
         prof.event(#procedure)
         percentage := scrollbar_percentage(scrollbar)
         offset_y := scrollbar.bounds.t + cast(int) (cast(f32) (rect_size_y(scrollbar.bounds) - SCROLL_SPINDLE_HEIGHT) * percentage)
-        paint_box(msg, scrollbar.bounds, 0xffffff)
-        paint_box(msg, rect_make4(scrollbar.bounds.l, offset_y, scrollbar.bounds.r, offset_y + SCROLL_SPINDLE_HEIGHT), 0xff0000)
+        paint_rect(msg, scrollbar.bounds, 0xffffff)
+        paint_rect(msg, rect_make4(scrollbar.bounds.l, offset_y, scrollbar.bounds.r, offset_y + SCROLL_SPINDLE_HEIGHT), 0xff0000)
     }
     return 0
 }
@@ -85,7 +85,7 @@ vpanel_message :: proc(element: ^Element, message: Msg) -> int {
     #partial switch msg in message {
         case Msg_Paint:
             prof.event(#procedure)
-            paint_box(msg, panel.bounds, 0x000000)
+            paint_rect(msg, panel.bounds, 0x000000)
         case Msg_Layout:
             vpanel_layout(panel, panel.bounds)
             element_repaint(panel)

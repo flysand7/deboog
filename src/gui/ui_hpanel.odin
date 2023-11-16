@@ -19,7 +19,7 @@ hpanel_message :: proc(element: ^Element, message: Msg) -> int {
     panel := cast(^HPanel) element
     #partial switch msg in message {
         case Msg_Paint:
-            paint_box(msg, panel.bounds, 0x000000)
+            paint_rect(msg, panel.bounds, 0x000000)
         case Msg_Layout:
             hpanel_layout(panel, panel.bounds)
             element_repaint(panel)

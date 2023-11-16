@@ -37,14 +37,14 @@ checkbox_message :: proc(element: ^Element, message: Msg) -> int {
             }
             color_checked := u32(checkbox.color.value)
             color_back := u32(0x000000)
-            paint_rect(msg, element.bounds, color_back, color_border)
+            paint_box(msg, element.bounds, color_back, color_border)
             indent := 5
             rect := rect_make(
                 element.bounds.l + indent,
                 element.bounds.t + indent,
                 element.bounds.r - indent,
                 element.bounds.b - indent)
-            paint_box(msg, rect, color_checked)
+            paint_rect(msg, rect, color_checked)
     }
     return 0
 }

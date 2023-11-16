@@ -11,8 +11,7 @@ Painter :: struct {
     size:   Vec,
 }
 
-@(export)
-paint_box :: proc(painter: ^Painter, bounds: Rect, color: u32) #no_bounds_check {
+paint_rect :: proc(painter: ^Painter, bounds: Rect, color: u32) #no_bounds_check {
     rect := rect_intersect(bounds, painter.clip)
     for y in rect.t ..< rect.b {
         for x in rect.l ..< rect.r {
@@ -21,13 +20,13 @@ paint_box :: proc(painter: ^Painter, bounds: Rect, color: u32) #no_bounds_check 
     }
 }
 
-paint_rect :: proc(painter: ^Painter, bounds: Rect, bg: u32, fg: u32) #no_bounds_check {
+paint_box :: proc(painter: ^Painter, bounds: Rect, bg: u32, fg: u32) #no_bounds_check {
     prof.event(#procedure)
-    paint_box(painter, bounds, bg)
-    paint_box(painter, rect_make(bounds.l,   bounds.t,   bounds.r,   bounds.t+1), fg)
-    paint_box(painter, rect_make(bounds.l,   bounds.t,   bounds.l+1, bounds.b),   fg)
-    paint_box(painter, rect_make(bounds.l,   bounds.b-1, bounds.r,   bounds.b),   fg)
-    paint_box(painter, rect_make(bounds.r-1, bounds.t,   bounds.r,   bounds.b),   fg)
+    paint_rect(painter, bounds, bg)
+    paint_rect(painter, rect_make(bounds.l,   bounds.t,   bounds.r,   bounds.t+1), fg)
+    paint_rect(painter, rect_make(bounds.l,   bounds.t,   bounds.l+1, bounds.b),   fg)
+    paint_rect(painter, rect_make(bounds.l,   bounds.b-1, bounds.r,   bounds.b),   fg)
+    paint_rect(painter, rect_make(bounds.r-1, bounds.t,   bounds.r,   bounds.b),   fg)
 }
 
 paint_string :: proc(painter: ^Painter, bounds: Rect, str: string, color: u32, hcenter := true, vcenter := true) {
