@@ -26,7 +26,7 @@ checkbox_message :: proc(element: ^Element, message: Msg) -> int {
             checkbox.checked = !checkbox.checked
             new_color := checkbox.checked? u32(0x42c8f5) : u32(0x333333)
             animate(&checkbox.color, new_color, time.Second/6)
-        case Msg_Input_Hovered, Msg_Input_Pressed:
+        case Msg_Input_Hover_Enter, Msg_Input_Hover_Exit, Msg_Input_Press, Msg_Input_Release:
             element_repaint(checkbox)
         case Msg_Paint:
             hovered := checkbox.window.hovered == checkbox

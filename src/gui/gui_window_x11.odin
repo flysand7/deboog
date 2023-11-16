@@ -100,7 +100,7 @@ _x11_message_loop :: proc() {
         }
         if animation_counter >= ANIMATION_FREQUENCY {
             if animation_tick(animation_counter) {
-                _update_all()
+                _repaint_all_windows()
             }
             animation_counter = 0
         }
@@ -177,7 +177,7 @@ _x11_handle_event :: proc(event: ^xlib.XEvent) {
             window.clip = rect_make2({0, 0}, {new_size.x, new_size.y})
             element_message(window, Msg_Layout{})
             // Paint all elements on the new canvas.
-            _update_all()
+            _repaint_all_windows()
         }
     case .MotionNotify:
         window := _x11_find_window(event.xmotion.window)
@@ -186,7 +186,7 @@ _x11_handle_event :: proc(event: ^xlib.XEvent) {
         }
         window.cursor.x = cast(int) event.xmotion.x
         window.cursor.y = cast(int) event.xmotion.y
-        _window_input_event(window, Msg_Input_Move{window.cursor})
+        element_message(window, Msg_Input_Move{window.cursor})
     case .LeaveNotify:
         window := _x11_find_window(event.xmotion.window)
         if window == nil {
@@ -196,7 +196,7 @@ _x11_handle_event :: proc(event: ^xlib.XEvent) {
             window.cursor.x = -1
             window.cursor.y = -1
         }
-        _window_input_event(window, Msg_Input_Move{})
+        element_message(window, Msg_Input_Move{})
     case .ButtonPress, .ButtonRelease:
         window := _x11_find_window(event.xbutton.window)
         if window == nil {
@@ -205,9 +205,9 @@ _x11_handle_event :: proc(event: ^xlib.XEvent) {
         window.cursor.x = cast(int) event.xbutton.x
         window.cursor.y = cast(int) event.xbutton.y
         if event.xbutton.button == .Button4 && event.type == .ButtonPress {
-            _window_input_event(window, Msg_Input_Scroll{d = -1})
+            element_message(window, Msg_Input_Scroll{d = -1})
         } else if event.xbutton.button == .Button5 && event.type == .ButtonPress {
-            _window_input_event(window, Msg_Input_Scroll{d = 1})
+            element_message(window, Msg_Input_Scroll{d = 1})
         } else {
             button: Mouse_Button
             #partial switch event.xbutton.button {
@@ -216,7 +216,7 @@ _x11_handle_event :: proc(event: ^xlib.XEvent) {
                 case .Button3: button = .Right
             }
             action: Mouse_Action = event.type == .ButtonPress? .Press : .Release
-            _window_input_event(window, Msg_Input_Click{
+            element_message(window, Msg_Input_Click{
                 action = action,
                 button = button,
             })

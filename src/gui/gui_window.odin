@@ -36,7 +36,6 @@ Window :: struct {
     cursor:   Vec,
     hovered:  ^Element,
     pressed:  ^Element,
-    button:   Mouse_Button,
 }
 
 initialize :: proc() {
@@ -76,92 +75,114 @@ close_window :: proc(window: ^Window) {
     unordered_remove(&global.windows, found_idx)
 }
 
+/*
+    There's a little state machine with inputs we're implementing.
+    Most of the states are self, explanatory so I'll only explain
+    the part where "Pressed" and "Pressed (Not hovered)" states
+    transition into each other.
+    
+    That part implements the behaviour where you can click a button,
+    hover the mouse away and the button would still be considered
+    as a candidate for click. If you then move the mouse back to
+    the button and release it, the same button is still considered
+    to have been clicked.
+
+          +-------+
+    +---->|Hovered|
+    |     +---+---+
+    |         |
+    |         |
+    |    Button Press
+    |         |
+    |         |
+    |         v
+    |   +------------+               +-------------+
+    |   |            |<--Mouse-Move -+             |
+    |   |  Pressed   |               |   Pressed   |
+    |   |            +---Mouse-Move->|(Not hovered)|
+    |   +-----+------+               +------+------+
+    |         |                             |
+    |         +-----------------------------+
+    |                                       |
+Mouse Move                                  |
+    |                                Button Release
+    v                                       |
+ +--+---+                              +----v-----+
+ | Rest |<-----------------------------| Released |
+ +------+                              +----+-----+
+    ^                                       |
+    |                                 Left Button
+    |                                       v
+    |                                  +---------+
+    +----------------------------------| Clicked |
+                                       +---------+
+*/
 @(private)
 _window_message_proc :: proc(element: ^Element, message: Msg)->int {
     prof.event(#procedure)
     window := cast(^Window) element
     #partial switch msg in message {
-        case Msg_Layout:
-            if len(window.children) > 0 {
-                element_move(window.children[0], window.bounds, false)
-                element_repaint(window)
-            }
-        case:
-    }
-    return 1
-}
-
-@(private)
-_window_input_event :: proc(window: ^Window, message: Msg) -> int {
-    prof.event(#procedure)
-    if window.pressed != nil {
-        #partial switch msg in message {
-        case Msg_Input_Move:
+    case Msg_Layout:
+        if len(window.children) > 0 {
+            element_move(window.children[0], window.bounds, false)
+            element_repaint(window)
+        }
+    case Msg_Input_Move:
+        if window.pressed != nil {
             element_message(window.pressed, Msg_Input_Drag{window.cursor})
-        case Msg_Input_Click:
-            if msg.action == .Release {
-                if msg.button == .Left {
-                    if window.hovered == window.pressed {
-                        element_message(window.pressed, Msg_Input_Clicked{pos = window.cursor})
-                    }
+            pressed_contains_cursor := rect_contains(window.pressed.clip, window.cursor.x, window.cursor.y)
+            if pressed_contains_cursor && window.hovered == window {
+                window.hovered = window.pressed
+                element_message(window.pressed, Msg_Input_Hover_Enter{})
+            } else if !pressed_contains_cursor && window.hovered == window.pressed {
+                window.hovered = window
+                element_message(window.pressed, Msg_Input_Hover_Exit{})
+            }
+        } else {
+            hovered := element_find(window, window.cursor.x, window.cursor.y)
+            if hovered != window {
+                element_message(hovered, Msg_Input_Move{})
+                if hovered != window.hovered {
+                    prev_hovered := window.hovered
+                    window.hovered = hovered
+                    element_message(prev_hovered, Msg_Input_Hover_Exit{})
+                    element_message(window.hovered, Msg_Input_Hover_Enter{})
                 }
-                element_message(window.pressed, message)
-                _window_set_pressed(window, nil, msg.button)
             }
         }
-    }
-    if window.pressed != nil {
-        is_inside := rect_contains(window.pressed.clip, window.cursor.x, window.cursor.y)
-        if is_inside && window.hovered == window {
-            window.hovered = window.pressed
-            element_message(window.pressed, Msg_Input_Hovered{})
-        } else if !is_inside && window.hovered == window.pressed {
-            window.hovered = window
-            element_message(window.pressed, Msg_Input_Hovered{})
-        }
-    } else {
-        hovered := element_find(window, window.cursor.x, window.cursor.y)
-        #partial switch msg in message {
-        case Msg_Input_Move:
-            element_message(hovered, Msg_Input_Move{})
-        case Msg_Input_Click:
-            if msg.action == .Press {
-                _window_set_pressed(window, hovered, msg.button)
-                element_message(hovered, message)
+        _repaint_all_windows()
+    case Msg_Input_Click:
+        if msg.action == .Release {
+            if msg.button == .Left && window.hovered == window.pressed {
+                element_message(window.pressed, Msg_Input_Clicked{pos = window.cursor})
+            }
+            element_message(window.pressed, message)
+            previous := window.pressed
+            window.pressed = nil
+            if previous != nil {
+                // TODO(flysand): Figure out if we need that.
+                element_message(previous, Msg_Input_Release{})
+            }
+        } else if msg.action == .Press {
+            assert(window.pressed == nil, "The user has more than one mice! That's unfair!!!")
+            window.pressed = window.hovered
+            if window.hovered != window {
+                element_message(window.hovered, Msg_Input_Press{})
             }
         }
-        if hovered != window.hovered {
-            prev_hovered := window.hovered
-            window.hovered = hovered
-            element_message(prev_hovered, Msg_Input_Hovered{})
-            element_message(window.hovered, Msg_Input_Hovered{})
-        }
-    }
-    if msg, ok := message.(Msg_Input_Scroll); ok {
+        _repaint_all_windows()
+    case Msg_Input_Scroll:
         scroll := element_find_scrollable(window, window.cursor.x, window.cursor.y)
         if scroll != nil {
             element_message(scroll, msg)
         }
+        _repaint_all_windows()
     }
-    _update_all()
     return 1
 }
 
 @(private)
-_window_set_pressed :: proc(window: ^Window, element: ^Element, button: Mouse_Button) {
-    previous := window.pressed
-    window.pressed = element
-    window.button = button
-    if previous != nil {
-        element_message(previous, Msg_Input_Pressed{})
-    }
-    if element != nil {
-        element_message(element, Msg_Input_Pressed{})
-    }
-}
-
-@(private)
-_update_all :: proc() {
+_repaint_all_windows :: proc() {
     prof.event(#procedure)
     for idx := 0; idx < len(global.windows); idx += 1 {
         window := global.windows[idx]

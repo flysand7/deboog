@@ -53,13 +53,10 @@ Msg_Input_Move :: struct{
     pos: Vec,
 }
 
-Msg_Input_Pressed :: struct{
-    // TODO: The location of the mouse press?
-}
-
-Msg_Input_Hovered :: struct {
-    // TODO: Element-relative coordinates of the mouse
-}
+Msg_Input_Press         :: struct{}
+Msg_Input_Release       :: struct{}
+Msg_Input_Hover_Enter :: struct {}
+Msg_Input_Hover_Exit  :: struct {}
 
 Msg_Input_Click :: struct {
     button: Mouse_Button,
@@ -79,8 +76,10 @@ Msg :: union {
     Msg_Input_Move,
     Msg_Input_Drag,
     Msg_Input_Clicked,
-    Msg_Input_Pressed,
-    Msg_Input_Hovered,
+    Msg_Input_Press,
+    Msg_Input_Release,
+    Msg_Input_Hover_Enter,
+    Msg_Input_Hover_Exit,
     Msg_Input_Click,
     Msg_Input_Scroll,
     // In response to this event the element must issue draw commands to draw
@@ -144,7 +143,7 @@ element_message :: proc(element: ^Element, message: Msg) -> int {
     if element == nil {
         return 1
     }
-    if _,ok := message.(Msg_Destroy); ok {
+    if _, ok := message.(Msg_Destroy); ok {
         if .Element_Destroy in element.flags {
             return 0
         }
@@ -248,7 +247,8 @@ _element_destroy_now :: proc(element: ^Element) -> bool {
     if .Element_Destroy in element.flags {
         element_message(element, Msg_Destroy{})
         if element.window.pressed == element {
-            _window_set_pressed(element.window, nil, nil)
+            element.window.pressed = nil
+            element_message(element, Msg_Input_Release{})
         }
         if element.window.hovered == element {
             element.window.hovered = element.window
