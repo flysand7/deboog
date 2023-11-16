@@ -46,7 +46,7 @@ scrollbar_message :: proc(element: ^Element, message: Msg) -> int {
     case Msg_Paint:
         prof.event(#procedure)
         percentage := scrollbar_percentage(scrollbar)
-        offset_y := scrollbar.bounds.t + cast(int) (cast(f32) rect_size_y(scrollbar.bounds) * percentage)
+        offset_y := scrollbar.bounds.t + cast(int) (cast(f32) (rect_size_y(scrollbar.bounds) - SCROLL_SPINDLE_HEIGHT) * percentage)
         paint_box(msg, scrollbar.bounds, 0xffffff)
         paint_box(msg, rect_make4(scrollbar.bounds.l, offset_y, scrollbar.bounds.r, offset_y + SCROLL_SPINDLE_HEIGHT), 0xff0000)
     }
@@ -96,11 +96,11 @@ vpanel_message :: proc(element: ^Element, message: Msg) -> int {
         case Msg_Input_Scroll:
             scrollbar := cast(^Scrollbar) panel.children[0]
             scrollbar.scroll += 30 * msg.d
-            // if scrollbar.scroll > scrollbar.total {
-            //     scrollbar.scroll = scrollbar.total
-            // } else if scrollbar.scroll < 0 {
-            //     scrollbar.scroll = 0
-            // }
+            if scrollbar.scroll > scrollbar.total {
+                scrollbar.scroll = scrollbar.total
+            } else if scrollbar.scroll < 0 {
+                scrollbar.scroll = 0
+            }
             element_message(scrollbar.parent, Msg_Layout{})
             element_repaint(scrollbar)
     }
@@ -144,9 +144,9 @@ vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> in
                 // of the space we had scrolled. In the future this needs to be done
                 // in a different way where we use offsets to particular elements to
                 // see what had changed.
-                scrollbar.scroll = cast(int) (f32(total_y) * scrollbar_percentage(scrollbar))
+                scrollbar.scroll = cast(int) (f32(total_y - space_y) * scrollbar_percentage(scrollbar))
             }
-            scrollbar.total = total_y
+            scrollbar.total = total_y - space_y
             scrollbar_bounds := Rect {
                 l = bounds.r - SCROLLBAR_WIDTH,
                 t = bounds.t,
