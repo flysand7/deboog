@@ -69,6 +69,8 @@ VPanel :: struct {
 }
 
 vpanel_create :: proc(parent: ^Element, flags: Element_Flags = {}) -> ^VPanel {
+    flags := flags
+    flags |= {.Scrollable}
     panel := element_create(parent, VPanel, flags)
     panel.msg_class = vpanel_message
     // Create a child scrollbar. The panel will always have it
@@ -91,6 +93,16 @@ vpanel_message :: proc(element: ^Element, message: Msg) -> int {
             return vpanel_max_width(panel)
         case Msg_Preferred_Height:
             return vpanel_layout(panel, rect_make(0, 0, (msg.width.? or_else 0), 0), just_measure = true)
+        case Msg_Input_Scroll:
+            scrollbar := cast(^Scrollbar) panel.children[0]
+            scrollbar.scroll += 30 * msg.d
+            // if scrollbar.scroll > scrollbar.total {
+            //     scrollbar.scroll = scrollbar.total
+            // } else if scrollbar.scroll < 0 {
+            //     scrollbar.scroll = 0
+            // }
+            element_message(scrollbar.parent, Msg_Layout{})
+            element_repaint(scrollbar)
     }
     return 0
 }
@@ -122,6 +134,7 @@ vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> in
     if total_y < space_y && fills_count > 0 {
         per_fill = (space_y - total_y) / fills_count
     }
+    total_y += per_fill * fills_count
     // Check to see if we need a scrollbar and make a space for it.
     if !just_measure {
         if total_y > space_y {

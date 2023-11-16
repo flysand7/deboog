@@ -14,6 +14,8 @@ Element_Flags_Bits :: enum {
     // Panel flags
     Panel_HLayout,
     Panel_VLayout,
+    // Scrollable
+    Scrollable,
 }
 
 Msg_Destroy :: struct {}
@@ -64,6 +66,10 @@ Msg_Input_Click :: struct {
     action: Mouse_Action,
 }
 
+Msg_Input_Scroll :: struct {
+    d: int,
+}
+
 Msg :: union {
     // Element is expected to free all if its associated data.
     Msg_Destroy,
@@ -76,6 +82,7 @@ Msg :: union {
     Msg_Input_Pressed,
     Msg_Input_Hovered,
     Msg_Input_Click,
+    Msg_Input_Scroll,
     // In response to this event the element must issue draw commands to draw
     // itself.
     Msg_Paint,
@@ -178,6 +185,23 @@ element_find :: proc(element: ^Element, x, y: int) -> ^Element {
         }
     }
     return element
+}
+
+element_find_scrollable :: proc(element: ^Element, x,y: int) -> ^Element {
+    prof.event(#procedure)
+    for child in element.children {
+        if rect_contains(child.clip, x, y) {
+            element := element_find_scrollable(child, x, y)
+            if element != nil {
+                return element
+            }
+        }
+    }
+    if .Scrollable in element.flags {
+        return element
+    } else {
+        return nil
+    }
 }
 
 element_repaint :: proc(element: ^Element, region: Maybe(Rect) = nil) {

@@ -204,17 +204,23 @@ _x11_handle_event :: proc(event: ^xlib.XEvent) {
         }
         window.cursor.x = cast(int) event.xbutton.x
         window.cursor.y = cast(int) event.xbutton.y
-        button: Mouse_Button
-        action: Mouse_Action = event.type == .ButtonPress? .Press : .Release
-        #partial switch event.xbutton.button {
-            case .Button1: button = .Left
-            case .Button2: button = .Middle
-            case .Button3: button = .Right
+        if event.xbutton.button == .Button4 && event.type == .ButtonPress {
+            _window_input_event(window, Msg_Input_Scroll{d = -1})
+        } else if event.xbutton.button == .Button5 && event.type == .ButtonPress {
+            _window_input_event(window, Msg_Input_Scroll{d = 1})
+        } else {
+            button: Mouse_Button
+            #partial switch event.xbutton.button {
+                case .Button1: button = .Left
+                case .Button2: button = .Middle
+                case .Button3: button = .Right
+            }
+            action: Mouse_Action = event.type == .ButtonPress? .Press : .Release
+            _window_input_event(window, Msg_Input_Click{
+                action = action,
+                button = button,
+            })
         }
-        _window_input_event(window, Msg_Input_Click{
-            action = action,
-            button = button,
-        })
     }
 }
 

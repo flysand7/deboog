@@ -10,7 +10,7 @@ Text_View :: struct {
 }
 
 text_view_create :: proc(parent: ^Element, flags: Element_Flags, text: string) -> ^Text_View {
-    text_view := element_create(parent, Text_View, flags | {.Element_HFill, .Element_VFill})
+    text_view := element_create(parent, Text_View, flags | {.Element_HFill})
     text_view.msg_class = text_view_message
     text_view.text = strings.clone(text)
     return text_view

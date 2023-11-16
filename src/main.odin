@@ -30,17 +30,17 @@ main :: proc () {
     gui.initialize()
     window  := gui.window_create("Main window", 400, 400, {})
     vpanel  := gui.vpanel_create(window)
-    vpanel.gap = 10
+    vpanel.gap = 0
     // First hpanel
     hpanel1 := gui.hpanel_create(vpanel, {.Element_HFill})
     hpanel1.gap = 50
     gui.label_create(hpanel1, {}, "Click this:")
     button := gui.button_create(hpanel1, {}, "Click me!")
     // Third vpanel
-    vpanel2 := gui.vpanel_create(vpanel, {.Element_HFill})
+    // vpanel2 := gui.vpanel_create(vpanel, {.Element_HFill})
     bytes, ok := os.read_entire_file("src/gui/gui_window.odin")
     assert(ok, "File couldn't be loaded")
-    gui.text_view_create(vpanel2, {.Element_HFill}, cast(string) bytes)
+    gui.text_view_create(vpanel, {.Element_HFill}, cast(string) bytes)
     // Second hpanel
     hpanel2 := gui.hpanel_create(vpanel, {.Element_HFill})
     hpanel2.gap = 50

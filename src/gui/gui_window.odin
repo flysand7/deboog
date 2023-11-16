@@ -137,6 +137,12 @@ _window_input_event :: proc(window: ^Window, message: Msg) -> int {
             element_message(window.hovered, Msg_Input_Hovered{})
         }
     }
+    if msg, ok := message.(Msg_Input_Scroll); ok {
+        scroll := element_find_scrollable(window, window.cursor.x, window.cursor.y)
+        if scroll != nil {
+            element_message(scroll, msg)
+        }
+    }
     _update_all()
     return 1
 }
