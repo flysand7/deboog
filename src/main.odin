@@ -19,7 +19,7 @@ button_msg :: proc(element: ^gui.Element, message: gui.Msg)->int {
     return 0
 }
 
-main :: proc () {
+main :: proc () {    
     // Initialize the profiler.
     prof.init()
     prof.event(#procedure)

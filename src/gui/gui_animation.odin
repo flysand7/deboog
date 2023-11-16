@@ -74,7 +74,7 @@ animate :: proc(property: ^Property($T), final: T, duration: time.Duration, ease
         animation := &(animations^)[property.animation_id]
         animation.ease_fn = ease_fn
         animation.progress = 0
-        animation.duration = cast(f32) duration
+        animation.duration = f32(duration) / f32(time.Second)
         animation.start = property.value
         animation.final = final
     } else {
@@ -83,7 +83,7 @@ animate :: proc(property: ^Property($T), final: T, duration: time.Duration, ease
             property = property,
             ease_fn  = ease_fn,
             progress = 0,
-            duration = cast(f32) duration,
+            duration = f32(duration) / f32(time.Second),
             start    = property.value,
             final    = final,
         })
@@ -113,7 +113,7 @@ animation_tick_for :: #force_inline proc($P: typeid, $T: typeid, dt: time.Durati
             idx -= 1
             continue
         }
-        animation.progress += cast(f32) dt
+        animation.progress += cast(f32) dt / f32(time.Second)
         when P == Scalar_Property {
             property.value = interp_scalar(animation.start, animation.final, t, animation.ease_fn)
         } else when P == Color_Property {
@@ -122,6 +122,7 @@ animation_tick_for :: #force_inline proc($P: typeid, $T: typeid, dt: time.Durati
             #panic("Unknown property type")
         }
         element_repaint(property.owner)
+        element_message(property.owner, Msg_Animation_Notify{property = property})
         something_got_animated = true
     }
     return something_got_animated
@@ -143,7 +144,7 @@ interp_scalar :: proc(start, end: int, t: f32, ease_fn: Ease_Fn) -> int {
     start := cast(f32) start
     end   := cast(f32) end
     t1 := math_ease.ease(ease_fn, t)
-    return cast(int) math.round((1-t1)*start + t*end)
+    return cast(int) math.round((1-t1)*start + t1*end)
 }
 
 @(private="file")

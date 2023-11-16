@@ -22,6 +22,10 @@ Msg_Destroy :: struct {}
 Msg_Paint   :: ^Painter
 Msg_Layout  :: struct {}
 
+Msg_Animation_Notify :: struct {
+    property: rawptr,
+}
+
 Msg_Preferred_Width :: struct {
     height: Maybe(int),
 }
@@ -82,6 +86,7 @@ Msg :: union {
     Msg_Input_Hover_Exit,
     Msg_Input_Click,
     Msg_Input_Scroll,
+    Msg_Animation_Notify,
     // In response to this event the element must issue draw commands to draw
     // itself.
     Msg_Paint,

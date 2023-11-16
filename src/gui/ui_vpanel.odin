@@ -2,11 +2,12 @@
 package gui
 
 import "pesticider:prof"
+import "core:time"
 
 @(private="file")
 Scrollbar :: struct {
     using element: Element,
-    scroll: int,
+    scroll: Scalar_Property,
     total:  int,
 }
 
@@ -14,6 +15,7 @@ Scrollbar :: struct {
 scrollbar_create :: proc(parent: ^Element, flags: Element_Flags = {}) -> ^Scrollbar {
     scrollbar := element_create(parent, Scrollbar, flags)
     scrollbar.msg_class = scrollbar_message
+    scrollbar.scroll = scalar_property(scrollbar, 0)
     return scrollbar
 }
 
@@ -30,7 +32,7 @@ scrollbar_message :: proc(element: ^Element, message: Msg) -> int {
         } else if percentage > 1 {
             percentage = 1
         }
-        scrollbar.scroll = cast(int) (percentage * cast(f32) scrollbar.total)
+        scrollbar.scroll.value = cast(int) (percentage * cast(f32) scrollbar.total)
         // element_repaint(scrollbar)
         element_message(scrollbar.parent, Msg_Layout{})
     case Msg_Input_Drag:
@@ -40,15 +42,16 @@ scrollbar_message :: proc(element: ^Element, message: Msg) -> int {
         } else if percentage > 1 {
             percentage = 1
         }
-        scrollbar.scroll = cast(int) (percentage * cast(f32) scrollbar.total)
+        scrollbar.scroll.value = cast(int) (percentage * cast(f32) scrollbar.total)
         // element_repaint(scrollbar)
         element_message(scrollbar.parent, Msg_Layout{})
     case Msg_Paint:
-        prof.event(#procedure)
         percentage := scrollbar_percentage(scrollbar)
         offset_y := scrollbar.bounds.t + cast(int) (cast(f32) (rect_size_y(scrollbar.bounds) - SCROLL_SPINDLE_HEIGHT) * percentage)
         paint_rect(msg, scrollbar.bounds, 0xffffff)
         paint_rect(msg, rect_make4(scrollbar.bounds.l, offset_y, scrollbar.bounds.r, offset_y + SCROLL_SPINDLE_HEIGHT), 0xff0000)
+    case Msg_Animation_Notify:
+        element_message(scrollbar.parent, Msg_Layout{})        
     }
     return 0
 }
@@ -56,7 +59,7 @@ scrollbar_message :: proc(element: ^Element, message: Msg) -> int {
 @(private="file")
 scrollbar_percentage :: proc(scrollbar: ^Scrollbar) -> f32 {
     if scrollbar.total != 0.0 {
-        return f32(scrollbar.scroll) / f32(scrollbar.total)
+        return f32(scrollbar.scroll.value) / f32(scrollbar.total)
     } else {
         return 0.0
     }
@@ -82,6 +85,7 @@ vpanel_create :: proc(parent: ^Element, flags: Element_Flags = {}) -> ^VPanel {
 @(private="file")
 vpanel_message :: proc(element: ^Element, message: Msg) -> int {
     panel := cast(^VPanel) element
+    scrollbar := cast(^Scrollbar) panel.children[0]
     #partial switch msg in message {
         case Msg_Paint:
             prof.event(#procedure)
@@ -94,15 +98,13 @@ vpanel_message :: proc(element: ^Element, message: Msg) -> int {
         case Msg_Preferred_Height:
             return vpanel_layout(panel, rect_make(0, 0, (msg.width.? or_else 0), 0), just_measure = true)
         case Msg_Input_Scroll:
-            scrollbar := cast(^Scrollbar) panel.children[0]
-            scrollbar.scroll += 30 * msg.d
-            if scrollbar.scroll > scrollbar.total {
-                scrollbar.scroll = scrollbar.total
-            } else if scrollbar.scroll < 0 {
-                scrollbar.scroll = 0
+            new_value := scrollbar.scroll.value + 100 * msg.d
+            if new_value > scrollbar.total {
+                new_value = scrollbar.total
+            } else if new_value < 0 {
+                new_value = 0
             }
-            element_message(scrollbar.parent, Msg_Layout{})
-            element_repaint(scrollbar)
+            animate(&scrollbar.scroll, new_value, 300*time.Millisecond, .Cubic_Out)
     }
     return 0
 }
@@ -111,6 +113,7 @@ SCROLLBAR_WIDTH :: 20
 
 @(private="file")
 vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> int {
+    prof.event(#procedure)
     position := panel.border.t
     space_x  := rect_size_x(bounds) - quad_size_x(panel.border) - SCROLLBAR_WIDTH
     space_y  := rect_size_y(bounds) - quad_size_y(panel.border)
@@ -144,7 +147,7 @@ vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> in
                 // of the space we had scrolled. In the future this needs to be done
                 // in a different way where we use offsets to particular elements to
                 // see what had changed.
-                scrollbar.scroll = cast(int) (f32(total_y - space_y) * scrollbar_percentage(scrollbar))
+                scrollbar.scroll.value = cast(int) (f32(total_y - space_y) * scrollbar_percentage(scrollbar))
             }
             scrollbar.total = total_y - space_y
             scrollbar_bounds := Rect {
@@ -179,11 +182,12 @@ vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> in
         }
         if !just_measure {
             scrollbar := cast(^Scrollbar) panel.children[0]
+            scroll := scrollbar.scroll.value
             rect := rect_make(
                 bounds.l + panel.border.l + (space_x - width)/2,
-                bounds.t + position - scrollbar.scroll,
+                bounds.t + position - scroll,
                 bounds.l + panel.border.l + (space_x + width)/2,
-                bounds.t + position - scrollbar.scroll + height)
+                bounds.t + position - scroll + height)
             element_move(child, rect, false)
         }
         position += height + panel.gap
@@ -196,6 +200,7 @@ vpanel_layout :: proc(panel: ^VPanel, bounds: Rect, just_measure := false) -> in
 
 @(private="file")
 vpanel_max_width :: proc(panel: ^VPanel) -> int {
+    prof.event(#procedure)
     max_width := 0
     for child in panel.children {
         if .Element_Destroy in child.flags {
