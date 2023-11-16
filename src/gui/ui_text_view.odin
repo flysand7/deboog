@@ -2,6 +2,7 @@
 package gui
 
 import "core:strings"
+import "pesticider:prof"
 
 Text_View :: struct {
     using _: Element,
@@ -22,6 +23,7 @@ text_view_message :: proc(element: ^Element, message: Msg) -> int {
         case Msg_Destroy:
             delete(text_view.text)
         case Msg_Paint:
+            prof.event(#procedure)
             text_bounds := element.bounds
             text := text_view.text
             for line in strings.split_lines_iterator(&text) {

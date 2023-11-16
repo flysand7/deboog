@@ -3,6 +3,9 @@
 /ols.json
 /.vscode
 
+# Trace files.
+*.spall
+
 # The main executable
 /pesticider
 

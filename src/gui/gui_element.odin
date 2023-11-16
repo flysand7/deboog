@@ -1,6 +1,8 @@
 
 package gui
 
+import "pesticider:prof"
+
 Element_Flags :: bit_set[Element_Flags_Bits]
 Element_Flags_Bits :: enum {
     // Destruction
@@ -131,6 +133,7 @@ element_destroy :: proc(element: ^Element) {
 }
 
 element_message :: proc(element: ^Element, message: Msg) -> int {
+    prof.event(#procedure)
     if element == nil {
         return 1
     }
@@ -155,6 +158,7 @@ element_message :: proc(element: ^Element, message: Msg) -> int {
 }
 
 element_move :: proc(element: ^Element, bounds: Rect, force_layout: bool) {
+    prof.event(#procedure)
     old_clip := element.clip
     element.clip = rect_intersect(element.parent.clip, bounds)
     if  !rect_equals(element.bounds, bounds) ||
@@ -167,6 +171,7 @@ element_move :: proc(element: ^Element, bounds: Rect, force_layout: bool) {
 }
 
 element_find :: proc(element: ^Element, x, y: int) -> ^Element {
+    prof.event(#procedure)
     for child in element.children {
         if rect_contains(child.clip, x, y) {
             return element_find(child, x, y)
@@ -176,6 +181,7 @@ element_find :: proc(element: ^Element, x, y: int) -> ^Element {
 }
 
 element_repaint :: proc(element: ^Element, region: Maybe(Rect) = nil) {
+    prof.event(#procedure)
     rect := region.? or_else element.bounds
     rect = rect_intersect(rect, element.clip)
     if !rect_valid(rect) {
@@ -190,6 +196,7 @@ element_repaint :: proc(element: ^Element, region: Maybe(Rect) = nil) {
 
 @(private)
 _element_paint :: proc(element: ^Element, painter: ^Painter) {
+    prof.event(#procedure)
     clip := rect_intersect(element.clip, painter.clip)
     if !rect_valid(clip) {
         return
@@ -204,6 +211,7 @@ _element_paint :: proc(element: ^Element, painter: ^Painter) {
 
 @(private)
 _element_destroy_now :: proc(element: ^Element) -> bool {
+    prof.event(#procedure)
     if .Element_Destroy_Descendent in element.flags {
         element.flags &= ~{.Element_Destroy_Descendent}
         for idx := 0; idx < len(element.children); idx += 1 {

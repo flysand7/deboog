@@ -1,6 +1,8 @@
 
 package gui
 
+import "pesticider:prof"
+
 @(private="file")
 Scrollbar :: struct {
     using element: Element,
@@ -42,6 +44,7 @@ scrollbar_message :: proc(element: ^Element, message: Msg) -> int {
         // element_repaint(scrollbar)
         element_message(scrollbar.parent, Msg_Layout{})
     case Msg_Paint:
+        prof.event(#procedure)
         percentage := scrollbar_percentage(scrollbar)
         offset_y := scrollbar.bounds.t + cast(int) (cast(f32) rect_size_y(scrollbar.bounds) * percentage)
         paint_box(msg, scrollbar.bounds, 0xffffff)
@@ -79,6 +82,7 @@ vpanel_message :: proc(element: ^Element, message: Msg) -> int {
     panel := cast(^VPanel) element
     #partial switch msg in message {
         case Msg_Paint:
+            prof.event(#procedure)
             paint_box(msg, panel.bounds, 0x000000)
         case Msg_Layout:
             vpanel_layout(panel, panel.bounds)

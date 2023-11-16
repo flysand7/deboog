@@ -9,6 +9,7 @@ import "arch"
 _ :: arch
 
 import "gui"
+import "pesticider:prof"
 
 button_msg :: proc(element: ^gui.Element, message: gui.Msg)->int {
     #partial switch msg in message {
@@ -19,8 +20,13 @@ button_msg :: proc(element: ^gui.Element, message: gui.Msg)->int {
 }
 
 main :: proc () {
+    // Initialize the profiler.
+    prof.init()
+    prof.event(#procedure)
+    // Initialize the logger.
     context.logger = logger_new(.Debug, os.stream_from_handle(os.stdout), "main")
     log.debugf("Logger set up!")
+    // Initialize the GUI library.
     gui.initialize()
     window  := gui.window_create("Main window", 400, 400, {})
     vpanel  := gui.vpanel_create(window)
@@ -42,4 +48,5 @@ main :: proc () {
     gui.checkbox_create(hpanel2, {}, true)
     button.msg_user = button_msg
     gui.message_loop()
+    prof.fini()
 }

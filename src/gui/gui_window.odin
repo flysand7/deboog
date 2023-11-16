@@ -1,6 +1,8 @@
 
 package gui
 
+import "pesticider:prof"
+
 UNIX_GUI_WAYLAND :: #config(UNIX_GUI_WAYLAND, false)
 OS_UNIX :: ODIN_OS == .Linux || ODIN_OS == .FreeBSD || ODIN_OS == .OpenBSD
 
@@ -50,6 +52,7 @@ message_loop :: proc() {
 }
 
 close_window :: proc(window: ^Window) {
+    prof.event(#procedure)
     if window == nil {
         return
     }
@@ -75,6 +78,7 @@ close_window :: proc(window: ^Window) {
 
 @(private)
 _window_message_proc :: proc(element: ^Element, message: Msg)->int {
+    prof.event(#procedure)
     window := cast(^Window) element
     #partial switch msg in message {
         case Msg_Layout:
@@ -89,6 +93,7 @@ _window_message_proc :: proc(element: ^Element, message: Msg)->int {
 
 @(private)
 _window_input_event :: proc(window: ^Window, message: Msg) -> int {
+    prof.event(#procedure)
     if window.pressed != nil {
         #partial switch msg in message {
         case Msg_Input_Move:
@@ -151,6 +156,7 @@ _window_set_pressed :: proc(window: ^Window, element: ^Element, button: Mouse_Bu
 
 @(private)
 _update_all :: proc() {
+    prof.event(#procedure)
     for idx := 0; idx < len(global.windows); idx += 1 {
         window := global.windows[idx]
         if _element_destroy_now(window) {
