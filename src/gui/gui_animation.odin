@@ -60,12 +60,21 @@ scalar_property :: proc(owner: ^Element, value: int) -> Scalar_Property {
     }
 }
 
+property_animation_target :: proc(property: Property($T)) -> (T, bool) {
+    if property.animation_id == -1 {
+        return 0, false
+    }
+    animations := animation_array_for_property(type_of(property), T)
+    animation := &(animations^)[property.animation_id]
+    return animation.final, true
+}
+
 color_property :: proc(owner: ^Element, value: u32) -> Color_Property {
     return Color_Property {
         owner = owner,
         animation_id = -1,
         value = value,
-    }
+    }    
 }
 
 animate :: proc(property: ^Property($T), final: T, duration: time.Duration, ease_fn := Ease_Fn.Cubic_In_Out) {

@@ -98,7 +98,13 @@ vpanel_message :: proc(element: ^Element, message: Msg) -> int {
         case Msg_Preferred_Height:
             return vpanel_layout(panel, rect_make(0, 0, (msg.width.? or_else 0), 0), just_measure = true)
         case Msg_Input_Scroll:
-            new_value := scrollbar.scroll.value + 100 * msg.d
+            new_value := 0
+            old_target, is_animated := property_animation_target(scrollbar.scroll)
+            if is_animated {
+                new_value = old_target + 100 * msg.d
+            } else {
+                new_value = scrollbar.scroll.value + 100 * msg.d
+            }
             if new_value > scrollbar.total {
                 new_value = scrollbar.total
             } else if new_value < 0 {
