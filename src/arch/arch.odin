@@ -1,4 +1,3 @@
-
 package arch
 
 CPU_MAX_FEATURES :: 1024

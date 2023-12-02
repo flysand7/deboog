@@ -1,4 +1,3 @@
-
 package elf
 
 // List of resources on ELF object files: https://refspecs.linuxfoundation.org/

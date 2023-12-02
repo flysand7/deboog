@@ -1,4 +1,3 @@
-
 package prof
 
 import "core:prof/spall"

@@ -30,8 +30,6 @@ _x11_window_create :: proc(title: cstring, size_x, size_y: int, flags: Element_F
     window := element_create(nil, Window, flags)
     append(&global.windows, window)
     // Set up the properties of window
-    window.size.x = size_x
-    window.size.y = size_y
     window.msg_class = _window_message_proc
     window.window = window
     // Initialize attributes
