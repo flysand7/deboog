@@ -1,19 +1,14 @@
-
 package gui
 
-/*
-    Type for vectors.
-*/
-Vec :: [2]int
+import "core:math"
 
-/*
-    Type for storing rectangles.
-*/
+Vec :: [2]f32
+
 Rect :: struct {
-    l: int,
-    t: int,
-    r: int,
-    b: int,
+    l: f32,
+    t: f32,
+    r: f32,
+    b: f32,
 }
 
 /*
@@ -24,13 +19,13 @@ Rect :: struct {
     (start + end)
 */
 Quad :: struct {
-    l: int,
-    t: int,
-    r: int,
-    b: int,
+    l: f32,
+    t: f32,
+    r: f32,
+    b: f32,
 }
 
-rect_make4 :: proc(l,t,r,b: int) -> Rect {
+rect_make4 :: proc(l,t,r,b: f32) -> Rect {
     rect: Rect
     rect.l = l
     rect.t = t
@@ -85,7 +80,7 @@ rect_equals :: proc(a, b: Rect) -> bool {
     return false
 }
 
-rect_contains_point :: proc(a: Rect, x, y: int) -> bool {
+rect_contains_point :: proc(a: Rect, x, y: f32) -> bool {
     if a.l <= x && x < a.r && a.t <= y && y < a.b {
         return true
     }
@@ -104,11 +99,27 @@ rect_contains :: proc {
     rect_contains_vec2i,
 }
 
-rect_size_x :: proc(r: Rect) -> int {
+rect_l :: proc(r: Rect) -> f32 {
+    return r.l
+}
+
+rect_t :: proc(r: Rect) -> f32 {
+    return r.t
+}
+
+rect_r :: proc(r: Rect) -> f32 {
+    return r.r
+}
+
+rect_b :: proc(r: Rect) -> f32 {
+    return r.b
+}
+
+rect_size_x :: proc(r: Rect) -> f32 {
     return r.r - r.l
 }
 
-rect_size_y :: proc(r: Rect) -> int {
+rect_size_y :: proc(r: Rect) -> f32 {
     return r.b - r.t
 }
 
@@ -119,7 +130,16 @@ rect_size :: proc(r: Rect) -> Vec {
     }
 }
 
-quad_make4 :: proc(l: int, t: int, r: int, b: int) -> Quad {
+rect_round :: proc(r: Rect) -> Rect {
+    return Rect {
+        math.round(r.l),
+        math.round(r.t),
+        math.round(r.r),
+        math.round(r.b),
+    }
+}
+
+quad_make4 :: proc(l: f32, t: f32, r: f32, b: f32) -> Quad {
     return Quad {
         l = l,
         t = t,
@@ -128,7 +148,7 @@ quad_make4 :: proc(l: int, t: int, r: int, b: int) -> Quad {
     }
 }
 
-quad_make2 :: proc(x: int, y: int) -> Quad {
+quad_make2 :: proc(x: f32, y: f32) -> Quad {
     return Quad {
         l = x,
         t = y,
@@ -137,7 +157,7 @@ quad_make2 :: proc(x: int, y: int) -> Quad {
     }
 }
 
-quad_make1 :: proc(a: int) -> Quad {
+quad_make1 :: proc(a: f32) -> Quad {
     return Quad {
         l = a,
         r = a,
@@ -152,11 +172,27 @@ quad_make :: proc {
     quad_make1,
 }
 
-quad_size_x :: proc(q: Quad) -> int {
+quad_l :: proc(q: Quad) -> f32 {
+    return q.l
+}
+
+quad_r :: proc(q: Quad) -> f32 {
+    return q.r
+}
+
+quad_t :: proc(q: Quad) -> f32 {
+    return q.t
+}
+
+quad_b :: proc(q: Quad) -> f32 {
+    return q.b
+}
+
+quad_size_x :: proc(q: Quad) -> f32 {
     return q.l + q.r
 }
 
-quad_size_y :: proc(q: Quad) -> int {
+quad_size_y :: proc(q: Quad) -> f32 {
     return q.t + q.b
 }
 
@@ -164,5 +200,14 @@ quad_size :: proc(q: Quad) -> Vec {
     return {
         q.l + q.r,
         q.t + q.b,
+    }
+}
+
+quad_round :: proc(q: Quad) -> Quad {
+    return Quad {
+        math.round(q.l),
+        math.round(q.t),
+        math.round(q.r),
+        math.round(q.b),
     }
 }

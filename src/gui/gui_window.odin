@@ -1,257 +1,228 @@
-
 package gui
 
-import "pesticider:prof"
+import "core:log"
+import "core:runtime"
 
-UNIX_GUI_WAYLAND :: #config(UNIX_GUI_WAYLAND, false)
-OS_UNIX :: ODIN_OS == .Linux || ODIN_OS == .FreeBSD || ODIN_OS == .OpenBSD
-
-global: Global_State = {}
-
-when OS_UNIX {
-    when UNIX_GUI_WAYLAND {
-        _Platform_Window :: _Wayland_Window
-        _Platform_Global :: _Wayland_Global
-    } else {
-        _Platform_Window :: _X11_Window
-        _Platform_Global :: _X11_Global
-    }
-} else {
-    _Platform_Window :: _Win32_Window
-    _Platform_Global :: _Win32_Global
-}
-
-Global_State :: struct {
-    using _: _Platform_Global,
-    windows: [dynamic]^Window,
-    close:   bool,
-}
+import glfw "glfw3"
 
 Window :: struct {
-    using element: Element,
-    using _:  _Platform_Window,
-    pixels:   [dynamic]u32,
-    size:     Vec,
-    dirty:    Rect,
-    cursor:   Vec,
-    hovered:  ^Element,
-    pressed:  ^Element,
+    handle:  ^glfw.Window,
+    root:    ^Widget,
+    size:    Vec,
+    visible: bool,
+    focused: bool,
+    hovered: bool,
+    closing: bool,
+    cursor:  Vec,
+    wx_pressed: ^Widget,
+    wx_hovered: ^Widget,
+    wxs_layout: [dynamic]^Widget,
+    wxs_paint:  [dynamic]^Widget,
 }
 
-initialize :: proc() {
-    _platform_initialize()
-}
+// Windowing-library abstractions
 
-window_create :: proc(title: cstring, size_x, size_y: int, flags: Element_Flags) -> ^Window {
-    return _platform_window_create(title, size_x, size_y, flags)
-}
+@(private="file")
+saved_context: runtime.Context // Use for callbacks to get back the context
 
-message_loop :: proc() {
-    _platform_message_loop()
-}
-
-close_window :: proc(window: ^Window) {
-    prof.event(#procedure)
-    if window == nil {
-        return
+window_create :: proc(size_x: i32, size_y: i32, title: cstring) -> ^Window {
+    glfw.default_window_hints()
+    when ODIN_DEBUG {
+        glfw.window_hint(.Context_Debug)
     }
-    when OS_UNIX {
-        when UNIX_GUI_WAYLAND {
-            _wayland_destroy_window(window)
-        } else {
-            _x11_destroy_window(window)
-        }
-    } else {
-        _win32_destroy_window(window)
+    // Doesn't work with all window managers.
+    glfw.window_hint(.Floating, true)
+    // If you want your window to be floating by default you should set it up with your window
+    // manager to display windows with "floating" class name as floating. It doesn't work by default
+    glfw.window_hint(.X11_Instance_Name, "pesticider")
+    glfw.window_hint(.X11_Class_Name, "floating")
+    glfw.window_hint(.Context_Version_Major, 3)
+    glfw.window_hint(.Context_Version_Minor, 3)
+    glfw.window_hint(.OpenGL_Profile, glfw.OpenGL_Profile.Core_Profile)
+    handle := glfw.create_window(
+        size_x,
+        size_y,
+        title,
+    )
+    if handle == nil {
+        log.fatalf("Unable to create a window.")
     }
-    found_idx := -1
-    for w, i in global.windows {
-        if w == window {
-            found_idx = i
-        }
+    glfw.set_window_iconify_callback(handle, glfw_window_iconify_callback)
+    glfw.set_window_focus_callback(handle, glfw_focus_callback)
+    glfw.set_cursor_enter_callback(handle, glfw_cursor_enter_callback)
+    glfw.set_framebuffer_size_callback(handle, glfw_framebuffer_size_callback)
+    glfw.set_key_callback(handle, glfw_key_callback)
+    glfw.set_mouse_button_callback(handle, glfw_mouse_button_callback)
+    glfw.set_cursor_pos_callback(handle, glfw_cursor_pos_callback)
+    glfw.set_scroll_callback(handle, glfw_scroll_callback)
+    glfw.set_drop_callback(handle, glfw_drop_callback)
+    glfw.set_window_close_callback(handle, glfw_window_close_callback)
+    window := new(Window)
+    window.handle = handle
+    if g.root_window == nil {
+        g.root_window = window
     }
-    assert(found_idx != -1, "Closing window that doesn't exist!")
-    free(global.windows[found_idx])
-    unordered_remove(&global.windows, found_idx)
-}
-
-/*
-    There's a little state machine with inputs we're implementing.
-    Most of the states are self, explanatory so I'll only explain
-    the part where "Pressed" and "Pressed (Not hovered)" states
-    transition into each other.
-    
-    That part implements the behaviour where you can click a button,
-    hover the mouse away and the button would still be considered
-    as a candidate for click. If you then move the mouse back to
-    the button and release it, the same button is still considered
-    to have been clicked.
-
-          +-------+
-    +---->|Hovered|
-    |     +---+---+
-    |         |
-    |         |
-    |    Button Press
-    |         |
-    |         |
-    |         v
-    |   +------------+               +-------------+
-    |   |            |<--Mouse-Move -+             |
-    |   |  Pressed   |               |   Pressed   |
-    |   |            +---Mouse-Move->|(Not hovered)|
-    |   +-----+------+               +------+------+
-    |         |                             |
-    |         +-----------------------------+
-    |                                       |
-Mouse Move                                  |
-    |                                Button Release
-    v                                       |
- +--+---+                              +----v-----+
- | Rest |<-----------------------------| Released |
- +------+                              +----+-----+
-    ^                                       |
-    |                                 Left Button
-    |                                       v
-    |                                  +---------+
-    +----------------------------------| Clicked |
-                                       +---------+
-*/
-@(private)
-_window_message_proc :: proc(element: ^Element, message: Msg)->int {
-    prof.event(#procedure)
-    window := cast(^Window) element
-    #partial switch msg in message {
-    case Msg_Layout:
-        if len(window.children) > 0 {
-            element_move(window.children[0], window.bounds, false)
-            element_repaint(window)
-        }
-    case Msg_Input_Move:
-        if window.pressed != nil {
-            element_message(window.pressed, Msg_Input_Drag{window.cursor})
-            pressed_contains_cursor := rect_contains(window.pressed.clip, window.cursor.x, window.cursor.y)
-            if pressed_contains_cursor && window.hovered == window {
-                window.hovered = window.pressed
-                element_message(window.pressed, Msg_Input_Hover_Enter{})
-            } else if !pressed_contains_cursor && window.hovered == window.pressed {
-                window.hovered = window
-                element_message(window.pressed, Msg_Input_Hover_Exit{})
-            }
-        } else {
-            hovered := element_find(window, window.cursor.x, window.cursor.y)
-            if hovered != window {
-                element_message(hovered, Msg_Input_Move{})
-                if hovered != window.hovered {
-                    prev_hovered := window.hovered
-                    window.hovered = hovered
-                    element_message(prev_hovered, Msg_Input_Hover_Exit{})
-                    element_message(window.hovered, Msg_Input_Hover_Enter{})
-                }
-            }
-        }
-        _repaint_all_windows()
-    case Msg_Input_Click:
-        if msg.action == .Release {
-            if msg.button == .Left && window.hovered == window.pressed {
-                element_message(window.pressed, Msg_Input_Clicked{pos = window.cursor})
-            }
-            element_message(window.pressed, message)
-            previous := window.pressed
-            window.pressed = nil
-            if previous != nil {
-                // TODO(flysand): Figure out if we need that.
-                element_message(previous, Msg_Input_Release{})
-            }
-        } else if msg.action == .Press {
-            assert(window.pressed == nil, "The user has more than one mice! That's unfair!!!")
-            window.pressed = window.hovered
-            if window.hovered != window {
-                element_message(window.hovered, Msg_Input_Press{})
-            }
-        }
-        _repaint_all_windows()
-    case Msg_Input_Scroll:
-        scroll := element_find_scrollable(window, window.cursor.x, window.cursor.y)
-        if scroll != nil {
-            element_message(scroll, msg)
-        }
-        _repaint_all_windows()
-    }
-    return 1
+    append(&g.windows, window)
+    glfw.set_window_user_pointer(handle, window)
+    return window
 }
 
 @(private)
-_repaint_all_windows :: proc() {
-    prof.event(#procedure)
-    for idx := 0; idx < len(global.windows); idx += 1 {
-        window := global.windows[idx]
-        if _element_destroy_now(window) {
-            unordered_remove(&global.windows, idx)
-            idx -= 1
-        }
-        if !rect_valid(window.dirty) {
-            continue
-        }
-        painter: Painter
-        painter.size = window.size
-        painter.pixels = cast([^]u32) raw_data(window.pixels)
-        painter.clip = rect_intersect(window.bounds, window.dirty)
-        _element_paint(window, &painter)
-        _platform_end_paint(window)
-        window.dirty = rect_make({}, {})
-    }
-}
-
-
-@(private)
-_platform_initialize :: proc() {
-    when OS_UNIX {
-        when UNIX_GUI_WAYLAND {
-            _wayland_initialize()
-        } else {
-            _x11_initialize()
-        }
-    } else when ODIN_OS == .windows {
-        _win32_initialize()
-    }
+window_destroy :: proc(window: ^Window) {
+    glfw.destroy_window(window.handle)
 }
 
 @(private)
-_platform_window_create :: proc(title: cstring, width, height: int, flags: Element_Flags) -> ^Window {
-    when OS_UNIX {
-        when UNIX_GUI_WAYLAND {
-            return _wayland_window_create(title, width, height, flags)
-        } else {
-            return _x11_window_create(title, width, height, flags)
-        }
-    } else {
-        return _win32_window_create(title, width, height, flags)
-    }
+should_close :: proc() -> bool {
+    return cast(bool) glfw.window_should_close(g.root_window.handle)
 }
 
 @(private)
-_platform_message_loop :: proc() {
-    when OS_UNIX {
-        when UNIX_GUI_WAYLAND {
-            _wayland_message_loop()
-        } else {
-            _x11_message_loop()
-        }
-    } else {
-        _win32_message_loop()
-    }
+windows_init :: proc() {
+    saved_context = context
+    major, minor, patch := glfw.get_version()
+    log.infof("GLFW binary version: %d.%d.%d", major, minor, patch)
+    glfw.set_error_callback(glfw_error_callback)
+    glfw.init()
 }
 
 @(private)
-_platform_end_paint :: proc(window: ^Window) {
-    when OS_UNIX {
-        when UNIX_GUI_WAYLAND {
-            _wayland_end_paint(window)
-        } else {
-            _x11_end_paint(window)
-        }
-    } else {
-        _win32_end_paint(window)
+windows_fini :: proc() {
+    glfw.terminate()
+    g.root_window = nil
+}
+
+@(private)
+windows_wait_events :: proc() {
+    glfw.wait_events()
+}
+
+@(private)
+windows_wait_events_timeout :: proc(timeout: f64) {
+    glfw.wait_events_timeout(timeout)
+}
+
+@(private)
+get_time :: proc() -> f64 {
+    return glfw.get_time()
+}
+
+// Glfw-specific functions
+
+@(private="file")
+glfw_error_callback :: proc "c" (code: glfw.Error, description: cstring) {
+    context = saved_context
+    log.errorf("GLFW Error %v: %s", code, description)
+}
+
+@(private="file")
+glfw_window_iconify_callback :: proc "c" (handle: ^glfw.Window, iconified: b32) {
+    window := cast(^Window) glfw.get_window_user_pointer(handle)
+    window.visible = !iconified
+}
+
+@(private="file")
+glfw_focus_callback :: proc "c" (handle: ^glfw.Window, focused: b32) {
+    window := cast(^Window) glfw.get_window_user_pointer(handle)
+    window.focused = cast(bool) focused
+}
+
+@(private="file")
+glfw_cursor_enter_callback :: proc "c" (handle: ^glfw.Window, entered: b32) {
+    window := cast(^Window) glfw.get_window_user_pointer(handle)
+    window.hovered = !! entered
+}
+
+@(private="file")
+glfw_framebuffer_size_callback :: proc "c" (handle: ^glfw.Window, size_x: i32, size_y: i32) {
+    context = saved_context
+    window := cast(^Window) glfw.get_window_user_pointer(handle)
+    window.size = {
+        cast(f32) size_x,
+        cast(f32) size_y,
     }
+    push_window_event(window, Event_Size {
+        size = {
+            cast(f32) size_x,
+            cast(f32) size_y,
+        },
+    })
+}
+
+@(private="file")
+glfw_key_callback :: proc "c" (
+    handle: ^glfw.Window,
+    key: glfw.Key,
+    scan: i32,
+    action: glfw.Action,
+    mods: glfw.Mod,
+) {
+    _ = cast(^Window) glfw.get_window_user_pointer(handle)
+    // Do nothing for now.
+}
+
+@(private="file")
+glfw_mouse_button_callback :: proc "c" (
+    handle: ^glfw.Window,
+    button: glfw.Mouse_Button,
+    action: glfw.Action,
+    mods: glfw.Mod,
+) {
+    context = saved_context
+    window := cast(^Window) glfw.get_window_user_pointer(handle)
+    conv_action: Action
+    conv_button: Mouse_Button
+    #partial switch action {
+    case .Press:   conv_action = .Press
+    case .Release: conv_action = .Release
+    case: return
+    }
+    #partial switch button {
+    case .Left:    conv_button = .Left
+    case .Middle:  conv_button = .Mid
+    case .Right:   conv_button = .Right
+    case .Button4: conv_button = .Mouse4
+    case .Button5: conv_button = .Mouse5
+    case: return
+    }
+    push_window_event(window, Event_Press {
+        action = conv_action,
+        button = conv_button,
+    })
+}
+
+@(private="file")
+glfw_cursor_pos_callback :: proc "c" (handle: ^glfw.Window, pos_x: f64, pos_y: f64) {
+    context = saved_context
+    window := cast(^Window) glfw.get_window_user_pointer(handle)
+    push_window_event(window, Event_Move {
+        pos = {
+            cast(f32) pos_x,
+            cast(f32) pos_y,
+        },
+    })
+}
+
+@(private="file")
+glfw_scroll_callback :: proc "c" (handle: ^glfw.Window, scroll_x: f64, scroll_y: f64) {
+    context = saved_context
+    window := cast(^Window) glfw.get_window_user_pointer(handle)
+    push_window_event(window, Event_Scroll {
+        scroll = {
+            cast(f32) scroll_x,
+            cast(f32) scroll_y,
+        },
+    })
+}
+
+@(private="file")
+glfw_drop_callback :: proc "c" (handle: ^glfw.Window, path_count: i32, paths: [^]cstring) {
+    _ = cast(^Window) glfw.get_window_user_pointer(handle)
+    _ = paths[:path_count]
+}
+
+@(private="file")
+glfw_window_close_callback :: proc "c" (handle: ^glfw.Window) {
+    window := cast(^Window) glfw.get_window_user_pointer(handle)
+    window.closing = true
 }
