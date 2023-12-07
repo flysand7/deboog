@@ -14,17 +14,8 @@ render_state: struct {
     framebuffer_size: Vec,
 }
 
-@(private="file")
-quad_data: struct {
-    vertex_array: u32,
-    vertex_count: int,
-}
-
-@(private="file")
-textured_quad_data: struct {
-    vertex_array: u32,
-    vertex_count: int,
-}
+@(private="file") quad_data: Buffer
+@(private="file") textured_quad_data: Buffer
 
 @(private="file")
 simple_shader: Shader(struct {
@@ -41,6 +32,11 @@ texture_shader: Shader(struct {
     position: Uniform(Vec),
     our_texture: Uniform(Texture),
 })
+
+Buffer :: struct {
+    id: u32,
+    vertices: i32,
+}
 
 Shader :: struct($T: typeid)
 where
@@ -77,7 +73,7 @@ compile_shader :: proc(type: u32, source: cstring) -> u32 {
 }
 
 @(private="file")
-load_shader :: proc(shader: ^Shader($T), vert_source: cstring, frag_source: cstring) {
+init_shader :: proc(shader: ^Shader($T), vert_source: cstring, frag_source: cstring) {
     shader_program := gl.CreateProgram()
     vert_shader := compile_shader(gl.VERTEX_SHADER, vert_source)
     frag_shader := compile_shader(gl.FRAGMENT_SHADER, frag_source)
@@ -99,7 +95,7 @@ load_shader :: proc(shader: ^Shader($T), vert_source: cstring, frag_source: cstr
 }
 
 @(private="file")
-create_static_buffer :: proc(buffer: []$T) -> u32
+init_static_buffer :: proc(buffer: ^Buffer, vertices: []$T)
 where
     intrinsics.type_is_struct(intrinsics.type_base_type(T))
 {
@@ -117,7 +113,7 @@ where
     vbo: u32
     gl.GenBuffers(1, &vbo)
     gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-    gl.BufferData(gl.ARRAY_BUFFER, vertex_size*len(buffer), raw_data(buffer), gl.STATIC_DRAW)
+    gl.BufferData(gl.ARRAY_BUFFER, vertex_size*len(vertices), raw_data(vertices), gl.STATIC_DRAW)
     // Bind vertex attributes.
     attrib_index := u32(0)
     for i in 0 ..< vertex_fields_count {
@@ -168,7 +164,8 @@ where
         }
         attrib_index += 1
     }
-    return vao
+    buffer.id = vao
+    buffer.vertices = cast(i32) len(vertices)
 }
 
 @(private="file")
@@ -226,6 +223,7 @@ where
             texture := (cast(^Texture) value_ptr)^
             gl.ActiveTexture(gl.TEXTURE0 + texture_slot)
             gl.BindTexture(gl.TEXTURE_2D, texture.id)
+            gl.Uniform1ui(location_ptr^, texture_slot)
             texture_slot += 1
         case:
             panic("Bad uniform type")
@@ -269,36 +267,35 @@ load_texture :: proc(bytes: []u8) -> Texture {
     return {id = texture }
 }
 
+@(private="file")
+draw_buffer :: proc(buffer: Buffer) {
+    gl.BindVertexArray(buffer.id)
+    gl.DrawArrays(gl.TRIANGLES, 0, buffer.vertices)
+}
+
 renderer_init :: proc() {
-    quad_buffer := []struct{pos: Vec} {
+    init_static_buffer(&quad_data, []struct{pos: Vec} {
         { pos = { 0, 0 }, },
         { pos = { 1, 0 }, },
         { pos = { 0, 1 }, },
         { pos = { 1, 0 }, },
         { pos = { 0, 1 }, },
         { pos = { 1, 1 }, },
-    }
-    quad_data.vertex_array = create_static_buffer(quad_buffer)
-    quad_data.vertex_count = len(quad_buffer)
-    load_shader(
-        &simple_shader,
-        #load("./rendering/simple.vert"),
-        #load("./rendering/simple.frag"),
-    )
-    textured_quad_buffer := []struct{
-        pos: Vec,
-        tex_coord: Vec,
-    } {
+    })
+    init_static_buffer(&textured_quad_data, []struct{pos: Vec, tex_coord: Vec} {
         { pos = { 0, 0 }, tex_coord = { 0, 0 } },
         { pos = { 1, 0 }, tex_coord = { 1, 0 } },
         { pos = { 0, 1 }, tex_coord = { 0, 1 } },
         { pos = { 1, 0 }, tex_coord = { 1, 0 } },
         { pos = { 0, 1 }, tex_coord = { 0, 1 } },
         { pos = { 1, 1 }, tex_coord = { 1, 1 } },
-    }
-    textured_quad_data.vertex_array = create_static_buffer(textured_quad_buffer)
-    textured_quad_data.vertex_count = len(textured_quad_buffer)
-    load_shader(
+    })
+    init_shader(
+        &simple_shader,
+        #load("./rendering/simple.vert"),
+        #load("./rendering/simple.frag"),
+    )
+    init_shader(
         &texture_shader,
         #load("./rendering/textured.vert"),
         #load("./rendering/textured.frag"),
@@ -311,8 +308,7 @@ render_rect :: proc(bounds: Rect, color: [3]f32) {
     shader_uniform(&simple_shader.position, rect_position(bounds))
     shader_uniform(&simple_shader.color,    color)
     shader_use(&simple_shader)
-    gl.BindVertexArray(quad_data.vertex_array)
-    gl.DrawArrays(gl.TRIANGLES, 0, i32(quad_data.vertex_count))
+    draw_buffer(quad_data)
 }
 
 render_textured_rect :: proc(bounds: Rect, texture: Texture) {
@@ -321,8 +317,7 @@ render_textured_rect :: proc(bounds: Rect, texture: Texture) {
     shader_uniform(&texture_shader.position, rect_position(bounds))
     shader_uniform(&texture_shader.our_texture, texture)
     shader_use(&texture_shader)
-    gl.BindVertexArray(textured_quad_data.vertex_array)
-    gl.DrawArrays(gl.TRIANGLES, 0, i32(textured_quad_data.vertex_count))
+    draw_buffer(textured_quad_data)
 }
 
 @(private)
