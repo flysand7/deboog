@@ -205,7 +205,7 @@ where
     uniforms_struct := uniforms_type_info.variant.(runtime.Type_Info_Struct)
     uniforms_count := len(uniforms_struct.names)
     storage_ptr := cast(uintptr) rawptr(uniforms)
-    texture_slot := u32(0)
+    texture_slot := i32(0)
     for i in 0 ..< uniforms_count {
         uniform_offset := uniforms_struct.offsets[i]
         uniform_struct := reflect.type_info_base(uniforms_struct.types[i]).variant.(runtime.Type_Info_Struct)
@@ -227,9 +227,9 @@ where
             gl.Uniform1i(location_ptr^, v)
         case Texture:
             texture := (cast(^Texture) value_ptr)^
-            gl.ActiveTexture(gl.TEXTURE0 + texture_slot)
+            gl.ActiveTexture(gl.TEXTURE0 + u32(texture_slot))
             gl.BindTexture(gl.TEXTURE_2D, texture.id)
-            gl.Uniform1ui(location_ptr^, texture_slot)
+            gl.Uniform1i(location_ptr^, cast(i32) texture_slot)
             texture_slot += 1
         case:
             panic("Bad uniform type")
