@@ -8,6 +8,7 @@
 
 # The main executable
 /deboog
+/gui
 
 # Intermediate and other binary files
 *.o
