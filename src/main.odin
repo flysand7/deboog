@@ -7,7 +7,7 @@ import "core:os"
 _ :: arch
 
 // import "gui"
-import "pesticider:profiler"
+import "src:profiler"
 
 main :: proc () {
     context.logger = logger_new(.Debug, os.stream_from_handle(os.stdout), "main")

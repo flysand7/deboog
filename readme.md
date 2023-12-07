@@ -1,5 +1,5 @@
 
-# Pesticider
+# Deboog
 
 Cross-platform extensible GUI debugger. Features:
 

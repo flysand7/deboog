@@ -7,8 +7,7 @@
 *.spall
 
 # The main executable
-/pesticider
-/gui
+/deboog
 
 # Intermediate and other binary files
 *.o

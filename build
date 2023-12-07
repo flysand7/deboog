@@ -7,5 +7,5 @@ odin build src                 \
     -no-threaded-checker       \
     -terse-errors              \
     -max-error-count:5         \
-    -collection:pesticider=src \
-    -out:pesticider
+    -collection:src=src        \
+    -out:deboog
