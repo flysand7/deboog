@@ -1,6 +1,8 @@
 package gui
 
-import gl "vendor:OpenGL"
+import gl   "vendor:OpenGL"
+import stbi "vendor:stb/image"
+
 import "core:intrinsics"
 import "core:runtime"
 import "core:reflect"
@@ -19,11 +21,25 @@ quad_data: struct {
 }
 
 @(private="file")
+textured_quad_data: struct {
+    vertex_array: u32,
+    vertex_count: int,
+}
+
+@(private="file")
 simple_shader: Shader(struct {
     screen:   Uniform(Vec),
     scale:    Uniform(Vec),
     position: Uniform(Vec),
     color:    Uniform(Color),
+})
+
+@(private="file")
+texture_shader: Shader(struct {
+    screen:   Uniform(Vec),
+    scale:    Uniform(Vec),
+    position: Uniform(Vec),
+    our_texture: Uniform(Texture),
 })
 
 Shader :: struct($T: typeid)
@@ -37,6 +53,10 @@ where
 Uniform :: struct($T: typeid) {
     location: struct { _:i32 },
     value:    T,
+}
+
+Texture :: struct {
+    id: u32,
 }
 
 @(private="file")
@@ -141,7 +161,7 @@ where
                     }
                 }
             }
-            gl.VertexAttribPointer(attrib_index, i32(count), gl_type, false, i32(count*size), field_offset)
+            gl.VertexAttribPointer(attrib_index, i32(count), gl_type, false, i32(vertex_size), field_offset)
             gl.EnableVertexAttribArray(attrib_index)
         case:
             panic("Only arrays are allowed. Your vertex is bullshit!!!")
@@ -182,6 +202,7 @@ where
     uniforms_struct := uniforms_type_info.variant.(runtime.Type_Info_Struct)
     uniforms_count := len(uniforms_struct.names)
     storage_ptr := cast(uintptr) rawptr(uniforms)
+    texture_slot := u32(0)
     for i in 0 ..< uniforms_count {
         uniform_offset := uniforms_struct.offsets[i]
         uniform_struct := reflect.type_info_base(uniforms_struct.types[i]).variant.(runtime.Type_Info_Struct)
@@ -198,6 +219,14 @@ where
         case [4]f32:
             vec := (cast(^[4]f32) value_ptr)^
             gl.Uniform4f(location_ptr^, vec.x, vec.y, vec.z, vec.w)
+        case i32:
+            v := (cast(^i32) value_ptr)^
+            gl.Uniform1i(location_ptr^, v)
+        case Texture:
+            texture := (cast(^Texture) value_ptr)^
+            gl.ActiveTexture(gl.TEXTURE0 + texture_slot)
+            gl.BindTexture(gl.TEXTURE_2D, texture.id)
+            texture_slot += 1
         case:
             panic("Bad uniform type")
         }
@@ -208,6 +237,36 @@ where
 shader_use :: proc(shader: ^Shader($T)) {
     gl.UseProgram(shader.program)
     set_shader_uniforms(shader.program, &shader.uniforms)
+}
+
+@(private="file")
+shader_uniform :: proc(uniform: ^Uniform($Type), value: Type) {
+    uniform.value = value
+}
+
+@(private="file")
+load_texture :: proc(bytes: []u8) -> Texture {
+    texture: u32
+    gl.GenTextures(1, &texture)
+    gl.ActiveTexture(gl.TEXTURE0)
+    gl.BindTexture(gl.TEXTURE_2D, texture)
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+    size_x: i32
+    size_y: i32
+    channels: i32
+    stbi.set_flip_vertically_on_load(1)
+    data := stbi.load_from_memory(raw_data(bytes), cast(i32) len(bytes), &size_x, &size_y, &channels, 0)
+    assert(data != nil)
+    fmt.println(size_x, size_y, channels)
+    if channels == 4 {
+        gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size_x, size_y, 0, gl.RGBA, gl.UNSIGNED_BYTE, data)
+    } else {
+        gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, size_x, size_y, 0, gl.RGB, gl.UNSIGNED_BYTE, data)
+    }
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    return {id = texture }
 }
 
 renderer_init :: proc() {
@@ -221,17 +280,49 @@ renderer_init :: proc() {
     }
     quad_data.vertex_array = create_static_buffer(quad_buffer)
     quad_data.vertex_count = len(quad_buffer)
-    load_shader(&simple_shader, #load("./rendering/simple.vert"), #load("./rendering/simple.frag"))
+    load_shader(
+        &simple_shader,
+        #load("./rendering/simple.vert"),
+        #load("./rendering/simple.frag"),
+    )
+    textured_quad_buffer := []struct{
+        pos: Vec,
+        tex_coord: Vec,
+    } {
+        { pos = { 0, 0 }, tex_coord = { 0, 0 } },
+        { pos = { 1, 0 }, tex_coord = { 1, 0 } },
+        { pos = { 0, 1 }, tex_coord = { 0, 1 } },
+        { pos = { 1, 0 }, tex_coord = { 1, 0 } },
+        { pos = { 0, 1 }, tex_coord = { 0, 1 } },
+        { pos = { 1, 1 }, tex_coord = { 1, 1 } },
+    }
+    textured_quad_data.vertex_array = create_static_buffer(textured_quad_buffer)
+    textured_quad_data.vertex_count = len(textured_quad_buffer)
+    load_shader(
+        &texture_shader,
+        #load("./rendering/textured.vert"),
+        #load("./rendering/textured.frag"),
+    )
 }
 
 render_rect :: proc(bounds: Rect, color: [3]f32) {
-    simple_shader.screen.value   = render_state.framebuffer_size
-    simple_shader.scale.value    = rect_size(bounds)
-    simple_shader.position.value = rect_position(bounds)
-    simple_shader.color.value    = color
+    shader_uniform(&simple_shader.screen,   render_state.framebuffer_size)
+    shader_uniform(&simple_shader.scale,    rect_size(bounds))
+    shader_uniform(&simple_shader.position, rect_position(bounds))
+    shader_uniform(&simple_shader.color,    color)
     shader_use(&simple_shader)
     gl.BindVertexArray(quad_data.vertex_array)
     gl.DrawArrays(gl.TRIANGLES, 0, i32(quad_data.vertex_count))
+}
+
+render_textured_rect :: proc(bounds: Rect, texture: Texture) {
+    shader_uniform(&texture_shader.screen, render_state.framebuffer_size)
+    shader_uniform(&texture_shader.scale,  rect_size(bounds))
+    shader_uniform(&texture_shader.position, rect_position(bounds))
+    shader_uniform(&texture_shader.our_texture, texture)
+    shader_use(&texture_shader)
+    gl.BindVertexArray(textured_quad_data.vertex_array)
+    gl.DrawArrays(gl.TRIANGLES, 0, i32(textured_quad_data.vertex_count))
 }
 
 @(private)

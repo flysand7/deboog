@@ -71,6 +71,7 @@ test_window :: proc(t: ^testing.T) {
         glfw.PollEvents()
         gl.Clear(gl.COLOR_BUFFER_BIT)
         render_rect({100, 100, 200, 200}, {1.0, 1.0, 0.5})
+        // render_textured_rect({200, 200, 300, 300}, {0.2, 0.7, 0.5})
         glfw.SwapBuffers(window)
     }
     glfw.Terminate()
