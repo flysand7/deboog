@@ -64,13 +64,18 @@ test_window :: proc(t: ^testing.T) {
     glfw.MakeContextCurrent(window)
     gl.load_up_to(OPENGL_MAJOR, OPENGL_MINOR, glfw.gl_set_proc_address)
     gl.DebugMessageCallback(gl_debug_proc, nil)
-    gl.ClearColor(0.5,0.3,0.2,1)
     renderer_set_framebuffer_size({1280, 720})
     renderer_init()
+    surface := create_surface({400, 400})
     for ! glfw.WindowShouldClose(window) {
         glfw.PollEvents()
+        gl.ClearColor(0.5,0.3,0.2,1)
         gl.Clear(gl.COLOR_BUFFER_BIT)
-        render_rect({100, 100, 200, 200}, {1.0, 1.0, 0.5})
+        
+        render_surface_start(&surface)
+        render_rect({100, 100, 200, 200}, {1.0, 0.0, 0.5})
+        render_surface(&surface, {400, 400})
+
         // render_textured_rect({200, 200, 300, 300}, {0.2, 0.7, 0.5})
         glfw.SwapBuffers(window)
     }

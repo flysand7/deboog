@@ -33,6 +33,12 @@ texture_shader: Shader(struct {
     our_texture: Uniform(Texture),
 })
 
+Surface :: struct {
+    id: u32, // framebuffer object
+    texture: Texture,
+    size: Vec,
+}
+
 Buffer :: struct {
     id: u32,
     vertices: i32,
@@ -250,6 +256,8 @@ load_texture :: proc(bytes: []u8) -> Texture {
     gl.BindTexture(gl.TEXTURE_2D, texture)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
     size_x: i32
     size_y: i32
     channels: i32
@@ -262,8 +270,24 @@ load_texture :: proc(bytes: []u8) -> Texture {
     } else {
         gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, size_x, size_y, 0, gl.RGB, gl.UNSIGNED_BYTE, data)
     }
+    return {id = texture }
+}
+
+@(private="file")
+create_color_buffer :: proc(bytes: [^]u8, size_x: int, size_y: int, channels: i32) -> Texture {
+    texture: u32
+    gl.GenTextures(1, &texture)
+    gl.ActiveTexture(gl.TEXTURE0)
+    gl.BindTexture(gl.TEXTURE_2D, texture)
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
     gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    if channels == 4 {
+        gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, i32(size_x), i32(size_y), 0, gl.RGBA, gl.UNSIGNED_BYTE, bytes)
+    } else {
+        gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, i32(size_x), i32(size_y), 0, gl.RGB, gl.UNSIGNED_BYTE, bytes)
+    }
     return {id = texture }
 }
 
@@ -302,6 +326,26 @@ renderer_init :: proc() {
     )
 }
 
+create_surface :: proc(size: Vec) -> Surface {
+    fbo: u32
+    gl.GenFramebuffers(1, &fbo)
+    gl.BindFramebuffer(gl.FRAMEBUFFER, fbo)
+    fbo_texture := create_color_buffer(nil, cast(int) size.x, cast(int) size.y, 4)
+    gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fbo_texture.id, 0)
+    status := gl.CheckFramebufferStatus(gl.FRAMEBUFFER)
+    assert(status == gl.FRAMEBUFFER_COMPLETE, "Incomplete framebuffer")
+    return {
+        id = fbo,
+        texture = fbo_texture,
+        size = size,
+    }
+}
+
+delete_surface :: proc(surface: ^Surface) {
+    gl.DeleteTextures(1, &surface.texture.id)
+    gl.DeleteFramebuffers(1, &surface.id)
+}
+
 render_rect :: proc(bounds: Rect, color: [3]f32) {
     shader_uniform(&simple_shader.screen,   render_state.framebuffer_size)
     shader_uniform(&simple_shader.scale,    rect_size(bounds))
@@ -318,6 +362,17 @@ render_textured_rect :: proc(bounds: Rect, texture: Texture) {
     shader_uniform(&texture_shader.our_texture, texture)
     shader_use(&texture_shader)
     draw_buffer(textured_quad_data)
+}
+
+render_surface_start :: proc(surface: ^Surface) {
+    gl.BindFramebuffer(gl.FRAMEBUFFER, surface.id)
+    gl.ClearColor(1.0, 1.0, 0.5, 1.0)
+    gl.Clear(gl.COLOR_BUFFER_BIT)
+}
+
+render_surface :: proc(surface: ^Surface, pos: Vec) {
+    gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
+    render_textured_rect({pos.x, pos.y, pos.x + 400, pos.y + 400}, surface.texture)
 }
 
 @(private)
