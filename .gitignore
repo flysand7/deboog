@@ -1,14 +1,18 @@
 
+# Ignore extensionless files.
+*
+!*/
+!*.*
+
+# Don't ignore these:
+!/build
+
 # Editor/environment-specific stuff.
 /ols.json
-/.vscode
+/.vscode/
 
 # Trace files.
 *.spall
-
-# The main executable
-/deboog
-/gui
 
 # Intermediate and other binary files
 *.o
