@@ -19,18 +19,28 @@ render_state: struct {
 
 @(private="file")
 simple_shader: Shader(struct {
-    screen:   Uniform(Vec),
-    scale:    Uniform(Vec),
-    position: Uniform(Vec),
-    color:    Uniform(Color),
+    screen:        Uniform(Vec),
+    scale:         Uniform(Vec),
+    position:      Uniform(Vec),
+    color:         Uniform(Color),
 })
 
 @(private="file")
 texture_shader: Shader(struct {
-    screen:   Uniform(Vec),
-    scale:    Uniform(Vec),
-    position: Uniform(Vec),
-    our_texture: Uniform(Texture),
+    screen:        Uniform(Vec),
+    scale:         Uniform(Vec),
+    position:      Uniform(Vec),
+    our_texture:   Uniform(Texture),
+})
+
+@(private="file")
+sampled_shader: Shader(struct {
+    screen:        Uniform(Vec),
+    scale:         Uniform(Vec),
+    position:      Uniform(Vec),
+    sample_offset: Uniform(Vec),
+    sample_size:   Uniform(Vec),
+    our_texture:   Uniform(Texture),
 })
 
 Surface :: struct {
@@ -324,6 +334,11 @@ renderer_init :: proc() {
         #load("./rendering/textured.vert"),
         #load("./rendering/textured.frag"),
     )
+    init_shader(
+        &sampled_shader,
+        #load("./rendering/sampled.vert"),
+        #load("./rendering/sampled.frag"),
+    )
 }
 
 create_surface :: proc(size: Vec) -> Surface {
@@ -356,11 +371,22 @@ render_rect :: proc(bounds: Rect, color: [3]f32) {
 }
 
 render_textured_rect :: proc(bounds: Rect, texture: Texture) {
-    shader_uniform(&texture_shader.screen, render_state.framebuffer_size)
-    shader_uniform(&texture_shader.scale,  rect_size(bounds))
-    shader_uniform(&texture_shader.position, rect_position(bounds))
+    shader_uniform(&texture_shader.screen,      render_state.framebuffer_size)
+    shader_uniform(&texture_shader.scale,       rect_size(bounds))
+    shader_uniform(&texture_shader.position,    rect_position(bounds))
     shader_uniform(&texture_shader.our_texture, texture)
     shader_use(&texture_shader)
+    draw_buffer(textured_quad_data)
+}
+
+render_textured_rect_clip :: proc(bounds: Rect, clip: Rect, texture: Texture) {
+    shader_uniform(&sampled_shader.screen,      render_state.framebuffer_size)
+    shader_uniform(&sampled_shader.scale,       rect_size(clip))
+    shader_uniform(&sampled_shader.position,    rect_position(bounds))
+    shader_uniform(&sampled_shader.sample_size, rect_size(bounds))
+    shader_uniform(&sampled_shader.sample_offset, rect_position(clip))
+    shader_uniform(&sampled_shader.our_texture, texture)
+    shader_use(&sampled_shader)
     draw_buffer(textured_quad_data)
 }
 
@@ -372,7 +398,14 @@ render_surface_start :: proc(surface: ^Surface) {
 
 render_surface :: proc(surface: ^Surface, pos: Vec) {
     gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
-    render_textured_rect({pos.x, pos.y, pos.x + 400, pos.y + 400}, surface.texture)
+    bounds := Rect {pos.x, pos.y, pos.x + surface.size.x, pos.y + surface.size.y}
+    render_textured_rect(bounds, surface.texture)
+}
+
+render_surface_clip :: proc(surface: ^Surface, pos: Vec, clip: Rect) {
+    gl.BindFramebuffer(gl.FRAMEBUFFER, 0)
+    bounds := Rect {pos.x, pos.y, pos.x + surface.size.x, pos.y + surface.size.y}
+    render_textured_rect_clip(bounds, clip, surface.texture)
 }
 
 @(private)

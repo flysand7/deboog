@@ -74,7 +74,7 @@ test_window :: proc(t: ^testing.T) {
         
         render_surface_start(&surface)
         render_rect({100, 100, 200, 200}, {1.0, 0.0, 0.5})
-        render_surface(&surface, {400, 400})
+        render_surface_clip(&surface, {100, 100}, {50, 50, 150, 150})
 
         // render_textured_rect({200, 200, 300, 300}, {0.2, 0.7, 0.5})
         glfw.SwapBuffers(window)
