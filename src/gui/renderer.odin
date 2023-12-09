@@ -2,7 +2,6 @@ package gui
 
 import gl   "vendor:OpenGL"
 import stbi "vendor:stb/image"
-import ft   "shared:freetype"
 
 import "core:intrinsics"
 import "core:runtime"
