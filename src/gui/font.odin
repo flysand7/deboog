@@ -7,7 +7,9 @@ import "core:os"
 import "core:fmt"
 import "core:testing"
 
-// TODO: Get the monitor DPI and use that to scale the fonts.
+@(private="file") library: ft.Library
+@(private="file") dpi :: Vec
+
 // TODO: Load the font metrics.
 Font :: struct {
     face: ft.Face,
@@ -19,24 +21,6 @@ Glyph :: struct {
     size_y: int,
     mono:   bool,
     pos:    Vec,
-}
-
-@(private="file")
-library: ft.Library
-
-@(test, private)
-test_fonts :: proc(t: ^testing.T) {
-    font, font_ok := load_font("/usr/share/fonts/noto/NotoSerif-Medium.ttf")
-    if !font_ok {
-        fmt.println("Failed to load a font")
-        os.exit(1)
-    }
-    glyph, glyph_ok := font_glyph(font, 'Q')
-    if !glyph_ok {
-        fmt.println("Failed to load a glyph")
-        os.exit(1)
-    }
-    debug_print_glyph_to_console(glyph)
 }
 
 @(init)
@@ -110,4 +94,19 @@ debug_print_glyph_to_console :: proc(glyph: Glyph) {
         }
         fmt.println()
     }
+}
+
+@(test, private)
+test_fonts :: proc(t: ^testing.T) {
+    font, font_ok := load_font("/usr/share/fonts/noto/NotoSerif-Medium.ttf")
+    if !font_ok {
+        fmt.println("Failed to load a font")
+        os.exit(1)
+    }
+    glyph, glyph_ok := font_glyph(font, 'Q')
+    if !glyph_ok {
+        fmt.println("Failed to load a glyph")
+        os.exit(1)
+    }
+    debug_print_glyph_to_console(glyph)
 }
