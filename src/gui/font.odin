@@ -11,7 +11,8 @@ import "core:testing"
 @(private="file") monitor_dpi: Vec = {96, 96}
 
 Font :: struct {
-    face:         ft.Face,
+    _handle:      ft.Face, // Used by the font library to track the loaded font.
+    _use_count:   int,     // Used by the renderer to count when the font should be unloaded.
     units_per_em: int,
     ascender:     int,
     descender:    int,
@@ -50,7 +51,7 @@ font_load :: proc(path: cstring) -> (_font: Font, _ok: bool) #optional_ok {
         return {}, false
     }
     return Font {
-        face = face,
+        _handle      = face,
         ascender     = auto_cast face.ascender,
         descender    = auto_cast face.descender,
         height       = auto_cast face.height,
@@ -58,40 +59,44 @@ font_load :: proc(path: cstring) -> (_font: Font, _ok: bool) #optional_ok {
     }, true
 }
 
+font_free :: proc(font: Font) {
+    ft.done_face(font._handle)
+}
+
 font_glyph :: proc(font: Font, char: rune, size_pt: int) -> (Glyph, bool) #optional_ok {
-    index := ft.get_char_index(font.face, auto_cast char)
+    index := ft.get_char_index(font._handle, auto_cast char)
     if index == 0 {
         log.errorf("Unable to load character")
         return {}, false
     }
     size_error := ft.set_char_size(
-        font.face,
+        font._handle,
         auto_cast (64*size_pt),
         auto_cast (64*size_pt),
         auto_cast monitor_dpi.x,
         auto_cast monitor_dpi.y,
     )
     fmt.assertf(size_error == .Ok, "ft.set_char_size failed: %v", size_error)
-    load_error := ft.load_glyph(font.face, index, {})
+    load_error := ft.load_glyph(font._handle, index, {})
     if load_error != nil {
         log.errorf("Unable to load glyph for character")
         return {}, false
     }
-    if font.face.glyph.format != .Bitmap {
-        render_error := ft.render_glyph(font.face.glyph, .Normal)
+    if font._handle.glyph.format != .Bitmap {
+        render_error := ft.render_glyph(font._handle.glyph, .Normal)
         if render_error != nil {
             log.errorf("Unable to render glyph for character")
             return {}, false
         }
     }
     return Glyph {
-        bitmap = font.face.glyph.bitmap.buffer,
-        size_x = cast(int) font.face.glyph.bitmap.width,
-        size_y = cast(int) font.face.glyph.bitmap.rows,
+        bitmap = font._handle.glyph.bitmap.buffer,
+        size_x = cast(int) font._handle.glyph.bitmap.width,
+        size_y = cast(int) font._handle.glyph.bitmap.rows,
         mono = false,
         pos = {
-            cast(f32) font.face.glyph.bitmap_left,
-            cast(f32) font.face.glyph.bitmap_top,
+            cast(f32) font._handle.glyph.bitmap_left,
+            cast(f32) font._handle.glyph.bitmap_top,
         },
     }, true
 }
