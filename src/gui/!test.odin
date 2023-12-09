@@ -46,6 +46,19 @@ glfw_framebuffer_size_callback :: proc "c" (window: glfw.WindowHandle, width, he
     renderer_set_framebuffer_size(Vec{cast(f32) width, cast(f32) height})
 }
 
+get_monitor_dpi :: proc(monitor: glfw.MonitorHandle) -> Vec {
+    mode := glfw.GetVideoMode(monitor)
+    pixels_size_x := mode.width
+    pixels_size_y := mode.height
+    fmt.println(pixels_size_x, pixels_size_y)
+    mm_size_x, mm_size_y := glfw.GetMonitorPhysicalSize(monitor)
+    fmt.println(mm_size_x, mm_size_y)
+    dpi_x := f32(pixels_size_x) * 25.4 / f32(mm_size_x)
+    dpi_y := f32(pixels_size_y) * 25.4 / f32(mm_size_y)
+    fmt.println(dpi_x, dpi_y)
+    return Vec { dpi_x, dpi_y }
+}
+
 @(test)
 test_window :: proc(t: ^testing.T) {
     glfw_major, glfw_minor, _ := glfw.GetVersion()
@@ -59,6 +72,7 @@ test_window :: proc(t: ^testing.T) {
     glfw.WindowHint(glfw.OPENGL_DEBUG_CONTEXT, true)
     glfw.WindowHintString(glfw.X11_INSTANCE_NAME, "pesticider")
     glfw.WindowHintString(glfw.X11_CLASS_NAME, "floating")
+    font_tell_monitor_dpi(get_monitor_dpi(glfw.GetPrimaryMonitor()))
     window := glfw.CreateWindow(1280, 720, "Test", nil, nil)
     glfw.SetFramebufferSizeCallback(window, glfw_framebuffer_size_callback)
     glfw.MakeContextCurrent(window)
