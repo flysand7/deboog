@@ -40,13 +40,7 @@ pack_glyphs :: proc(bitmap: Bitmap, glyphs_: []Glyph) -> map[rune]Rect {
 write_glyph_to_rect :: proc(dst_bitmap, src_bitmap: Bitmap, xoffs, yoffs: int) {
     for y in 0 ..< src_bitmap.size_y {
         for x in 0 ..< src_bitmap.size_x {
-            src_pixel: u8
-            if src_bitmap.mono {
-                src_byte := src_bitmap.buffer[(x + y*src_bitmap.size_x)/8]
-                src_pixel = (src_byte >> (cast(u8)x % 8)) != 0? 255 : 0
-            } else {
-                src_pixel = src_bitmap.buffer[x + y*src_bitmap.size_x]
-            }
+            src_pixel := src_bitmap.buffer[x + y*src_bitmap.size_x]
             dst_offs_x := xoffs + x
             dst_offs_y := yoffs + y
             // fmt.println(dst_offs_x, dst_offs_y)

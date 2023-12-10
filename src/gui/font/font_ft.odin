@@ -22,11 +22,11 @@ _ :: proc() {
     }
 }
 
-font_tell_monitor_dpi :: proc(dpi: types.Vec) {
+tell_monitor_dpi :: proc(dpi: types.Vec) {
     monitor_dpi = dpi
 }
 
-font_load :: proc(path: cstring) -> (_font: Font, _ok: bool) #optional_ok {
+load :: proc(path: cstring) -> (_font: Font, _ok: bool) #optional_ok {
     face := ft.Face {}
     error := ft.new_face(library, path, 0, &face)
     if error == .Unknown_File_Format {
@@ -45,11 +45,11 @@ font_load :: proc(path: cstring) -> (_font: Font, _ok: bool) #optional_ok {
     }, true
 }
 
-font_free :: proc(font: Font) {
+_free :: proc(font: Font) {
     ft.done_face(ft_face(font))
 }
 
-font_glyph :: proc(font: Font, char: rune, size_pt: int) -> (Glyph, bool) #optional_ok {
+glyph :: proc(font: Font, char: rune, size_pt: int) -> (Glyph, bool) #optional_ok {
     index := ft.get_char_index(ft_face(font), auto_cast char)
     if index == 0 {
         log.errorf("Unable to load character")
@@ -77,7 +77,6 @@ font_glyph :: proc(font: Font, char: rune, size_pt: int) -> (Glyph, bool) #optio
             buffer = raw_data(cloned),
             size_x = orig_size_x,
             size_y = orig_size_y,
-            mono = false,
         },
         pos = {
             cast(f32) ft_face(font).glyph.bitmap_left,
@@ -87,7 +86,7 @@ font_glyph :: proc(font: Font, char: rune, size_pt: int) -> (Glyph, bool) #optio
     }, true
 }
 
-font_glyphs :: proc(font: Font, ranges: []Rune_Range, size_pt: int) -> (
+glyphs :: proc(font: Font, ranges: []Rune_Range, size_pt: int) -> (
     [dynamic]Glyph, bool,
 ) #optional_ok
 {
@@ -104,7 +103,7 @@ font_glyphs :: proc(font: Font, ranges: []Rune_Range, size_pt: int) -> (
     glyphs := make([dynamic]Glyph, len(ranges))
     for range in ranges {
         for c in range.lo ..= range.hi {
-            glyph, glyph_ok := font_glyph(font, c, 16)
+            glyph, glyph_ok := glyph(font, c, 16)
             if glyph_ok {
                 append(&glyphs, glyph)
             } else {

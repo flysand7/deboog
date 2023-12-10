@@ -3,6 +3,7 @@ package gui
 import glfw "vendor:glfw"
 import gl   "vendor:OpenGL"
 
+import "font"
 import "render"
 
 import "core:testing"
@@ -74,7 +75,7 @@ test_window :: proc(t: ^testing.T) {
     glfw.WindowHint(glfw.OPENGL_DEBUG_CONTEXT, true)
     glfw.WindowHintString(glfw.X11_INSTANCE_NAME, "pesticider")
     glfw.WindowHintString(glfw.X11_CLASS_NAME, "floating")
-    font_tell_monitor_dpi(get_monitor_dpi(glfw.GetPrimaryMonitor()))
+    font.tell_monitor_dpi(get_monitor_dpi(glfw.GetPrimaryMonitor()))
     window := glfw.CreateWindow(1280, 720, "Test", nil, nil)
     glfw.SetFramebufferSizeCallback(window, glfw_framebuffer_size_callback)
     glfw.MakeContextCurrent(window)

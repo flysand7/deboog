@@ -26,7 +26,6 @@ Bitmap :: struct {
     buffer: [^]u8,
     size_x: int,
     size_y: int,
-    mono:   bool,
 }
 
 make_bitmap :: proc(size_x, size_y: int) -> Bitmap {
@@ -34,7 +33,6 @@ make_bitmap :: proc(size_x, size_y: int) -> Bitmap {
         buffer = raw_data(make([]u8, size_x * size_y)),
         size_x = size_x,
         size_y = size_y,
-        mono   = false,
     }
 }
 
@@ -44,12 +42,12 @@ pack_rune_ranges :: proc(
     ranges:    []Rune_Range,
     size_pt:   int,
 ) -> (map[rune]Rect, bool) {
-    font, load_ok := font_load(font_path)
+    font, load_ok := load(font_path)
     if ! load_ok {
         return {}, false
     }
-    defer font_free(font)
-    glyphs, glyphs_ok := font_glyphs(font, ranges, size_pt)
+    defer _free(font)
+    glyphs, glyphs_ok := glyphs(font, ranges, size_pt)
     if ! glyphs_ok {
         return {}, false
     }

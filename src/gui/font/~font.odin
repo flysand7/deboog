@@ -51,12 +51,12 @@ test_packing :: proc(t: ^testing.T) {
 
 @(test, private)
 test_font :: proc(t: ^testing.T) {
-    font, font_ok := font_load("/usr/share/fonts/noto/NotoSerif-Medium.ttf")
+    font, font_ok := load("/usr/share/fonts/noto/NotoSerif-Medium.ttf")
     if !font_ok {
         fmt.println("Failed to load a font")
         testing.fail_now(t)
     }
-    glyph, glyph_ok := font_glyph(font, 'Q', 9)
+    glyph, glyph_ok := glyph(font, 'Q', 9)
     if !glyph_ok {
         fmt.println("Failed to load a glyph")
         testing.fail_now(t)
@@ -69,13 +69,7 @@ debug_print_glyph_to_console :: proc(glyph: Glyph) {
     brightness_map := " .,;!v#"
     for y in 0 ..< glyph.bitmap.size_y {
         for x in 0 ..< glyph.bitmap.size_x {
-            pixel: int
-            if !glyph.bitmap.mono {
-                pixel = auto_cast glyph.bitmap.buffer[x+y*glyph.bitmap.size_x]
-            } else {
-                pixel_byte := glyph.bitmap.buffer[(x+y*glyph.bitmap.size_x)/8]
-                pixel = auto_cast (pixel_byte >> (cast(u8)x % 8))
-            }
+            pixel := glyph.bitmap.buffer[x+y*glyph.bitmap.size_x]
             normalized_pixel := (cast(f32) pixel / 256.0)
             max_brightness   := cast(f32) len(brightness_map)
             brightness := int(normalized_pixel * max_brightness)
