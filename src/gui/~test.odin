@@ -3,6 +3,8 @@ package gui
 import glfw "vendor:glfw"
 import gl   "vendor:OpenGL"
 
+import "render"
+
 import "core:testing"
 import "core:runtime"
 import "core:fmt"
@@ -43,7 +45,7 @@ gl_debug_proc :: proc "c" (source: u32, type: u32, id: u32, severity: u32, lengt
 glfw_framebuffer_size_callback :: proc "c" (window: glfw.WindowHandle, width, height: i32) {
     context = runtime.default_context()
     fmt.printf("Change framebuffer size: %dx%d\n", width, height)
-    renderer_set_framebuffer_size(Vec{cast(f32) width, cast(f32) height})
+    render.tell_framebuffer_size(Vec{cast(f32) width, cast(f32) height})
 }
 
 get_monitor_dpi :: proc(monitor: glfw.MonitorHandle) -> Vec {
@@ -78,19 +80,20 @@ test_window :: proc(t: ^testing.T) {
     glfw.MakeContextCurrent(window)
     gl.load_up_to(OPENGL_MAJOR, OPENGL_MINOR, glfw.gl_set_proc_address)
     gl.DebugMessageCallback(gl_debug_proc, nil)
-    renderer_set_framebuffer_size({1280, 720})
-    renderer_init()
-    surface := create_surface({400, 400})
+    render.tell_framebuffer_size({1280, 720})
+    render.init()
+    surface := render.create_surface({400, 400})
+    render.surface_start(&surface)
+    render.rect({100, 100, 200, 200}, {1.0, 0.0, 0.5})
+    render.surface_end()
+    
     for ! glfw.WindowShouldClose(window) {
         glfw.PollEvents()
         gl.ClearColor(0.5,0.3,0.2,1)
         gl.Clear(gl.COLOR_BUFFER_BIT)
         
-        render_surface_start(&surface)
-        render_rect({100, 100, 200, 200}, {1.0, 0.0, 0.5})
-        render_surface_clip(&surface, {100, 100}, {50, 50, 150, 150})
-
-        // render_textured_rect({200, 200, 300, 300}, {0.2, 0.7, 0.5})
+        render.surface_clip(&surface, {100, 100}, {50, 50, 150, 150})
+        
         glfw.SwapBuffers(window)
     }
     glfw.Terminate()

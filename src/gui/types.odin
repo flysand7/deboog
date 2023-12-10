@@ -1,40 +1,13 @@
 package gui
 
-Rect :: struct {
-    left:   f32,
-    top:    f32,
-    right:  f32,
-    bottom: f32,
-}
+import "types"
 
-Quad :: struct {
-    left:   f32,
-    right:  f32,
-    top:    f32,
-    bottom: f32,
-}
+Vec   :: types.Vec
+Rect  :: types.Rect
+Quad  :: types.Quad
+Color :: types.Color
 
-Vec :: [2]f32
+rect_size :: types.rect_size
+quad_size :: types.quad_size
 
-Color :: [3]f32
-
-rect_size :: proc(rect: Rect) -> Vec {
-    return {
-        rect.right - rect.left,
-        rect.bottom - rect.top,
-    }
-}
-
-rect_position :: proc(rect: Rect) -> Vec {
-    return {
-        rect.left,
-        rect.top,
-    }
-}
-
-quad_size :: proc(quad: Quad) -> Vec {
-    return {
-        quad.right + quad.left,
-        quad.bottom + quad.top,
-    }
-}
+rect_position :: types.rect_position
