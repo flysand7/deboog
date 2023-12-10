@@ -44,7 +44,7 @@ write_glyph_to_rect :: proc(dst_bitmap, src_bitmap: Bitmap, xoffs, yoffs: int) {
             src_pixel: u8
             if src_bitmap.mono {
                 src_byte := src_bitmap.buffer[(x + y*src_bitmap.size_x)/8]
-                src_pixel = src_byte >> (cast(u8)x % 8)
+                src_pixel = (src_byte >> (cast(u8)x % 8)) != 0? 255 : 0
             } else {
                 src_pixel = src_bitmap.buffer[x + y*src_bitmap.size_x]
             }
