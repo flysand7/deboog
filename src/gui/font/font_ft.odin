@@ -6,8 +6,9 @@ import "src:gui/types"
 
 import "core:log"
 import "core:os"
-import "core:fmt"
+// import "core:fmt"
 import "core:slice"
+import "core:unicode"
 
 @(private="file") library: ft.Library
 @(private="file") monitor_dpi: types.Vec = {300, 300}
@@ -44,11 +45,6 @@ font_load :: proc(path: cstring) -> (_font: Font, _ok: bool) #optional_ok {
     }, true
 }
 
-@(private="file")
-ft_face :: proc(font: Font) -> ft.Face {
-    return cast(ft.Face) font._handle
-}
-
 font_free :: proc(font: Font) {
     ft.done_face(ft_face(font))
 }
@@ -59,14 +55,6 @@ font_glyph :: proc(font: Font, char: rune, size_pt: int) -> (Glyph, bool) #optio
         log.errorf("Unable to load character")
         return {}, false
     }
-    size_error := ft.set_char_size(
-        ft_face(font),
-        auto_cast (64*size_pt),
-        auto_cast (64*size_pt),
-        auto_cast monitor_dpi.x,
-        auto_cast monitor_dpi.y,
-    )
-    fmt.assertf(size_error == .Ok, "ft.set_char_size failed: %v", size_error)
     load_error := ft.load_glyph(ft_face(font), index, {})
     if load_error != nil {
         log.errorf("Unable to load glyph for character")
@@ -97,4 +85,40 @@ font_glyph :: proc(font: Font, char: rune, size_pt: int) -> (Glyph, bool) #optio
         },
         char = char,
     }, true
+}
+
+font_glyphs :: proc(font: Font, ranges: []Rune_Range, size_pt: int) -> (
+    [dynamic]Glyph, bool,
+) #optional_ok
+{
+    size_error := ft.set_char_size(
+        ft_face(font),
+        auto_cast (64*16),
+        auto_cast (64*16),
+        auto_cast 300,
+        auto_cast 300,
+    )
+    if size_error != nil {
+        return {}, false
+    }
+    glyphs := make([dynamic]Glyph, len(ranges))
+    for range in ranges {
+        for c in range.lo ..= range.hi {
+            glyph, glyph_ok := font_glyph(font, c, 16)
+            if glyph_ok {
+                append(&glyphs, glyph)
+            } else {
+                if unicode.is_print(c) {
+                    delete(glyphs)
+                    return {}, false
+                }
+            }
+        }
+    }
+    return glyphs, true
+}
+
+@(private="file")
+ft_face :: proc(font: Font) -> ft.Face {
+    return cast(ft.Face) font._handle
 }
