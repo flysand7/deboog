@@ -37,7 +37,7 @@ test_packing :: proc(t: ^testing.T) {
         mono   = false,
     }
     pack_glyphs(bitmap, glyphs[:])
-    write_status := stbi.write_bmp("font.bmp",
+    write_status := stbi.write_bmp("test/font.bmp",
         auto_cast bitmap.size_x,
         auto_cast bitmap.size_y,
         1,

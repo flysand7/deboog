@@ -14,9 +14,11 @@
 # Trace files.
 *.spall
 
+# Directory used for spitting out random files by tests
+/test
+
 # Intermediate and other binary files
 *.o
 *.a
 *.elf
 *.bin
-
