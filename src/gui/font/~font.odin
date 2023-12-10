@@ -13,17 +13,23 @@ test_packing :: proc(t: ^testing.T) {
         testing.fail_now(t)
     }
     glyphs: [dynamic]Glyph
-    for c in ' ' ..< '~' {
-        glyph, glyph_ok := font_glyph(font, c, 16)
-        if !glyph_ok {
-            fmt.println("Failed to load a glyph")
-            testing.fail_now(t)
-        }
-        // debug_print_glyph_to_console(glyph)
-        append(&glyphs, glyph)
+    rune_ranges := []struct{start, end: rune}{
+        { ' ',  '~' },          // ASCII
+        { '\u00a0', '\u00ff' }, // Latin-1 supplement
+        { '\u0100', '\u024f' }, // Latin-extended A and B
+        { '\u0370', '\u03ff' }, // Greek
+        { '\u0400', '\u04ff' }, // Cyrillic
     }
-    bitmap_size_x := 1024
-    bitmap_size_y := 1024
+    for range in rune_ranges {
+        for c in range.start ..= range.end {
+            glyph, glyph_ok := font_glyph(font, c, 16)
+            if glyph_ok {
+                append(&glyphs, glyph)
+            }
+        }
+    }
+    bitmap_size_x := 4096
+    bitmap_size_y := 4096
     bitmap := Bitmap {
         size_x = bitmap_size_x,
         size_y = bitmap_size_y,
