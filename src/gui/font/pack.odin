@@ -6,7 +6,6 @@ import "core:slice"
 
 Rect :: types.Rect
 
-// TODO: Error check when there's not enough space in the destination bitmap.
 pack_glyphs :: proc(bitmap: Bitmap, glyphs_: []Glyph) -> map[rune]Rect {
     mapping := make(map[rune]Rect, allocator = context.allocator)
     glyphs  := slice.clone(glyphs_, context.temp_allocator)
