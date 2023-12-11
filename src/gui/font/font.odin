@@ -12,9 +12,15 @@ Font :: struct {
 }
 
 Glyph :: struct {
-    bitmap: Bitmap,
+    bitmap: types.Bitmap,
     pos:    types.Vec,
     char:   rune,
+}
+
+Mapped_Glyph :: struct {
+    pos:    types.Vec,
+    char:   rune,
+    rect:   types.Rect,
 }
 
 Rune_Range :: struct {
@@ -22,26 +28,12 @@ Rune_Range :: struct {
     hi: rune,
 }
 
-Bitmap :: struct {
-    buffer: [^]u8,
-    size_x: int,
-    size_y: int,
-}
-
-make_bitmap :: proc(size_x, size_y: int) -> Bitmap {
-    return {
-        buffer = raw_data(make([]u8, size_x * size_y)),
-        size_x = size_x,
-        size_y = size_y,
-    }
-}
-
 pack_rune_ranges :: proc(
-    bitmap:    Bitmap,
+    bitmap:    types.Bitmap,
     font_path: cstring,
     ranges:    []Rune_Range,
     size_pt:   int,
-) -> (map[rune]Rect, bool) {
+) -> (map[rune]Mapped_Glyph, bool) {
     font, load_ok := load(font_path)
     if ! load_ok {
         return {}, false

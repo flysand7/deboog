@@ -102,10 +102,10 @@ textured_rect :: proc(bounds: Rect, texture: Texture) {
 }
 
 textured_rect_clip :: proc(bounds: Rect, clip: Rect, texture: Texture) {
-    shader_uniform(&sampled_shader.screen,      render_state.framebuffer_size)
-    shader_uniform(&sampled_shader.scale,       rect_size(clip))
-    shader_uniform(&sampled_shader.position,    rect_position(bounds))
-    shader_uniform(&sampled_shader.sample_size, rect_size(bounds))
+    shader_uniform(&sampled_shader.screen,        render_state.framebuffer_size)
+    shader_uniform(&sampled_shader.scale,         rect_size(bounds))
+    shader_uniform(&sampled_shader.position,      rect_position(bounds))
+    shader_uniform(&sampled_shader.sample_size,   rect_size(clip))
     shader_uniform(&sampled_shader.sample_offset, rect_position(clip))
     shader_uniform(&sampled_shader.our_texture, texture)
     shader_use(&sampled_shader)

@@ -21,6 +21,20 @@ Vec :: [2]f32
 
 Color :: [3]f32
 
+Bitmap :: struct {
+    buffer: [^]u8,
+    size_x: int,
+    size_y: int,
+}
+
+make_bitmap :: proc(size_x, size_y: int) -> Bitmap {
+    return {
+        buffer = raw_data(make([]u8, size_x * size_y)),
+        size_x = size_x,
+        size_y = size_y,
+    }
+}
+
 rect_size :: proc(rect: Rect) -> Vec {
     return {
         rect.right - rect.left,

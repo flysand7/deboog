@@ -12,7 +12,7 @@ create_surface :: proc(size: Vec) -> Surface {
     fbo: u32
     gl.GenFramebuffers(1, &fbo)
     gl.BindFramebuffer(gl.FRAMEBUFFER, fbo)
-    fbo_texture := create_color_buffer(nil, cast(int) size.x, cast(int) size.y, 4)
+    fbo_texture := texture_from_raw_bytes(nil, cast(int) size.x, cast(int) size.y, 4)
     gl.FramebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, fbo_texture.id, 0)
     status := gl.CheckFramebufferStatus(gl.FRAMEBUFFER)
     assert(status == gl.FRAMEBUFFER_COMPLETE, "Incomplete framebuffer")

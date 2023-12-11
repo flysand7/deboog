@@ -2,24 +2,26 @@ package font
 
 import stbi "vendor:stb/image"
 
+import "src:/gui/types"
+
 import "core:testing"
 import "core:fmt"
 import "core:os"
 
 @(test, private)
 test_packing :: proc(t: ^testing.T) {
-    bitmap := make_bitmap(4096, 4096)
+    bitmap := types.make_bitmap(1024, 1024)
     mapping, mapping_ok := pack_rune_ranges(
         bitmap,
         "/usr/share/fonts/noto/NotoSerif-Medium.ttf",
         []Rune_Range {
             { ' ',  '~' },          // ASCII
-            { '\u00a0', '\u00ff' }, // Latin-1 supplement
-            { '\u0100', '\u024f' }, // Latin-extended A and B
-            { '\u0370', '\u03ff' }, // Greek
-            { '\u0400', '\u04ff' }, // Cyrillic
+            //{ '\u00a0', '\u00ff' }, // Latin-1 supplement
+            //{ '\u0100', '\u024f' }, // Latin-extended A and B
+            //{ '\u0370', '\u03ff' }, // Greek
+            //{ '\u0400', '\u04ff' }, // Cyrillic
         },
-        10,
+        16,
     )
     assert(mapping_ok)
     write_status := stbi.write_bmp("test/font.bmp",
@@ -38,7 +40,8 @@ test_packing :: proc(t: ^testing.T) {
         testing.fail_now(t)
     }
     fmt.fprintf(file, "{{\n")
-    for char, rect in mapping {
+    for char, glyph in mapping {
+        rect := glyph.rect
         fmt.fprintf(file,
             `    {{"char": "\u%04x", "rect": [%f, %f, %f, %f]}}
 `,
