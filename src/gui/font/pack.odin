@@ -30,10 +30,10 @@ pack_glyphs :: proc(
             pos  = glyph.pos,
             char = glyph.char,
             rect = types.Rect {
-                left   = cast(f32) (xoffs),
-                top    = cast(f32) (yoffs),
-                right  = cast(f32) (xoffs + glyph.bitmap.size_x),
-                bottom = cast(f32) (yoffs + glyph.bitmap.size_y),
+                left   = f32(xoffs) / f32(bitmap.size_x),
+                right  = f32(xoffs + glyph.bitmap.size_x) / f32(bitmap.size_x),
+                top    = 1.0 - f32(yoffs + glyph.bitmap.size_y)/f32(bitmap.size_y),
+                bottom = 1.0 - f32(yoffs)/f32(bitmap.size_y),
             },
         }
         xoffs += glyph.bitmap.size_x

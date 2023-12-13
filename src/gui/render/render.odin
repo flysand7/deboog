@@ -49,6 +49,17 @@ sampled_shader: Shader(struct {
     our_texture:   Uniform(Texture),
 })
 
+@(private)
+font_shader: Shader(struct {
+    screen:        Uniform(Vec),
+    scale:         Uniform(Vec),
+    position:      Uniform(Vec),
+    sample_offset: Uniform(Vec),
+    sample_size:   Uniform(Vec),
+    our_texture:   Uniform(Texture),
+})
+
+
 init :: proc() {
     init_static_buffer(&quad_data, []struct{pos: Vec} {
         { pos = { 0, 0 }, },
@@ -81,6 +92,11 @@ init :: proc() {
         #load("./shader/sampled.vert"),
         #load("./shader/sampled.frag"),
     )
+    init_shader(
+        &font_shader,
+        #load("./shader/font.vert"),
+        #load("./shader/font.frag"),
+    )
 }
 
 rect :: proc(bounds: Rect, color: [3]f32) {
@@ -109,6 +125,17 @@ textured_rect_clip :: proc(bounds: Rect, clip: Rect, texture: Texture) {
     shader_uniform(&sampled_shader.sample_offset, rect_position(clip))
     shader_uniform(&sampled_shader.our_texture, texture)
     shader_use(&sampled_shader)
+    draw_buffer(textured_quad_data)
+}
+
+char :: proc(bounds: Rect, clip: Rect, atlas: Texture) {
+    shader_uniform(&font_shader.screen,        render_state.framebuffer_size)
+    shader_uniform(&font_shader.scale,         rect_size(bounds))
+    shader_uniform(&font_shader.position,      rect_position(bounds))
+    shader_uniform(&font_shader.sample_size,   rect_size(clip))
+    shader_uniform(&font_shader.sample_offset, rect_position(clip))
+    shader_uniform(&font_shader.our_texture,   atlas)
+    shader_use(&font_shader)
     draw_buffer(textured_quad_data)
 }
 

@@ -98,25 +98,20 @@ test_window :: proc(t: ^testing.T) {
     render.surface_end()
     for ! glfw.WindowShouldClose(window) {
         glfw.PollEvents()
-        gl.ClearColor(0.5,0.3,0.2,1)
+        gl.ClearColor(0.0, 0.0, 0.0, 1)
         gl.Clear(gl.COLOR_BUFFER_BIT)
-        // render.surface_clip(&surface, {100, 100}, {50, 50, 150, 150})
-        offs := f32(50)
-        char := mapping['A']
-        char_size := rect_size(char.rect)
-        char_rect := char.rect
-        char_rect.left   = char_rect.left * char_size.x/f32(bitmap.size_x)
-        char_rect.top    = char_size.y - char_rect.bottom * char_size.y/f32(bitmap.size_y)
-        char_rect.right  = char_rect.right * char_size.x/f32(bitmap.size_x)
-        char_rect.bottom = char_size.y - char_rect.top * char_size.y/f32(bitmap.size_y)
-        fmt.println(char_rect)
-        // Rect{left = 201.562, top = 362.500, right = 220.703, bottom = 381.250}
-        render.textured_rect_clip(
-            {offs, 0, offs+char_size.x, char_size.y},
-            char_rect,
-            texture,
-        )
-        offs += char.pos.x * char_size.x
+        offs := f32(0)
+        for r in "Hello, world" {
+            char := mapping[r]
+            char_size := rect_size(char.rect)
+            char_size *= [2]f32 { f32(bitmap.size_x), f32(bitmap.size_y) }
+            render.char(
+                {100+offs, 100+0, 100+offs+char_size.x, 100+char_size.y},
+                char.rect,
+                texture,
+            )
+            offs += char_size.x + 10
+        }
         glfw.SwapBuffers(window)
     }
     glfw.Terminate()
