@@ -10,73 +10,76 @@ Read_Error :: enum {
     Not_Supported,
 }
 
-verify_offset :: proc(elf: Elf_File, offset: $T) -> Read_Error
-where
-    intrinsics.type_is_integer(T)
-{
+check_offset :: proc(elf: Elf_File, #any_int offset: uintptr) -> Read_Error {
     if 0 <= cast(uint) offset && cast(uint) offset < elf.size {
         return nil
     }
     return .Bad_Elf
 }
 
-verify_elf_header :: proc(elf: ^Elf_Header) -> Read_Error {
-    if elf.header_size != size_of(Elf_Header) {
+verify_elf_header :: proc(elf: Elf_File) -> Read_Error {
+    if elf.ehdr_sz != size_of(Ehdr) {
         return .Not_Elf
     }
-    if size_of(elf.identification) != 16 {
+    if size_of(elf.ident) != 16 {
         return .Not_Elf
     }
-    if elf.identification[.Magic_0] != ELF_MAGIC0 {
+    if elf.ident[.Magic_0] != MAGIC0 {
         return .Not_Elf
     }
-    if elf.identification[.Magic_1] != ELF_MAGIC1 {
+    if elf.ident[.Magic_1] != MAGIC1 {
         return .Not_Elf
     }
-    if elf.identification[.Magic_2] != ELF_MAGIC2 {
+    if elf.ident[.Magic_2] != MAGIC2 {
         return .Not_Elf
     }
-    if elf.identification[.Magic_3] != ELF_MAGIC3 {
+    if elf.ident[.Magic_3] != MAGIC3 {
         return .Not_Elf
     }
-    if elf.identification[.Data] != u8(Elf_Data.Lsb) {
+    if elf.ident[.Data] != u8(Endianness.Lsb) {
         return .Not_Supported
     }
-    if elf.identification[.Version] != 1 {
+    if elf.ident[.Version] != 1 {
+        return .Not_Supported
+    }
+    if check_offset(elf, elf.sh_off) != nil {
+        return .Bad_Elf
+    }
+    if elf.sh_ent_sz != size_of(Shdr) {
         return .Not_Supported
     }
     return nil
 }
 
-verify_zero_section :: proc(section: ^Elf_Section_Header) -> Read_Error {
-    if section.name != 0 {
+verify_zero_section :: proc(shdr: ^Shdr) -> Read_Error {
+    if shdr.name != 0 {
         return .Bad_Elf
     }
-    if section.type != Section_Type.Null {
+    if shdr.type != Section_Type.Null {
         return .Bad_Elf
     }
-    if section.flags != {} {
+    if shdr.flags != {} {
         return .Bad_Elf
     }
-    if section.addr != 0 {
+    if shdr.addr != 0 {
         return .Bad_Elf
     }
-    if section.offset != 0 {
+    if shdr.offset != 0 {
         return .Bad_Elf
     }
-    if section.size != 0 {
+    if shdr.size != 0 {
         return .Bad_Elf
     }
-    if section.link != SHN_UNDEF {
+    if shdr.link != SHN_UNDEF {
         return .Bad_Elf
     }
-    if section.info != 0 {
+    if shdr.info != 0 {
         return .Bad_Elf
     }
-    if section.address_align != 0 {
+    if shdr.address_align != 0 {
         return .Bad_Elf
     }
-    if section.entry_size != 0 {
+    if shdr.entry_size != 0 {
         return .Bad_Elf
     }
     return .Not_Elf
