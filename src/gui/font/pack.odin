@@ -32,8 +32,8 @@ pack_glyphs :: proc(
             rect = types.Rect {
                 left   = f32(xoffs) / f32(bitmap.size_x),
                 right  = f32(xoffs + glyph.bitmap.size_x) / f32(bitmap.size_x),
-                top    = 1.0 - f32(yoffs + glyph.bitmap.size_y)/f32(bitmap.size_y),
-                bottom = 1.0 - f32(yoffs)/f32(bitmap.size_y),
+                top    = f32(yoffs + glyph.bitmap.size_y)/f32(bitmap.size_y),
+                bottom = f32(yoffs)/f32(bitmap.size_y),
             },
         }
         xoffs += glyph.bitmap.size_x
@@ -52,7 +52,7 @@ write_glyph_to_rect :: proc(
         for x in 0 ..< src_bitmap.size_x {
             src_pixel := src_bitmap.buffer[x + y*src_bitmap.size_x]
             dst_offs_x := xoffs + x
-            dst_offs_y := dst_bitmap.size_y-1 - (yoffs + y)
+            dst_offs_y := yoffs + y
             // fmt.println(dst_offs_x, dst_offs_y)
             dst_bitmap.buffer[dst_offs_x + dst_offs_y * dst_bitmap.size_x] = src_pixel
         }

@@ -18,6 +18,7 @@ void main() {
     vertex_pos += position;
     vertex_pos /= screen/2.0;
     vertex_pos -= 1.0;
+    vertex_pos.y = -vertex_pos.y;
     frag_tex_coord = tex_coord * sample_size + sample_offset;
     gl_Position = vec4(vertex_pos.xy, 0.0, 1.0);
 }

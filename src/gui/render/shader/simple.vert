@@ -15,6 +15,7 @@ void main() {
     vertex_pos += position;
     vertex_pos /= screen/2.0;
     vertex_pos -= 1.0;
+    vertex_pos = -vertex_pos;
     frag_color = color;
     gl_Position = vec4(vertex_pos.xy, 0.0, 1.0);
 }

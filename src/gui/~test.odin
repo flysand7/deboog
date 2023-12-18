@@ -105,13 +105,17 @@ test_window :: proc(t: ^testing.T) {
             char := mapping[r]
             char_size := rect_size(char.rect)
             char_size *= [2]f32 { f32(bitmap.size_x), f32(bitmap.size_y) }
+            char_pos := [2]f32 {
+                100+char.pos.x+offs,
+                100-char.pos.y-char_size.y,
+            }
             render.char(
-                {100+offs, 100+0, 100+offs+char_size.x, 100+char_size.y},
+                {char_pos.x, char_pos.y, char_pos.x + char_size.x, char_pos.y + char_size.y},
                 char.rect,
                 texture,
                 {1.0, 1.0, 0.0},
             )
-            offs += char_size.x + 10
+            offs += char_size.x+5
         }
         glfw.SwapBuffers(window)
     }
