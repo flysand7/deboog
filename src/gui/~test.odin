@@ -91,14 +91,14 @@ test_window :: proc(t: ^testing.T) {
         16,
     )
     assert(packing_ok)
-    texture := render.texture_from_bitmap(bitmap, 1)
+    texture := render.texture_from_bitmap(bitmap, 1, monochrome_alpha = true)
     surface := render.create_surface({400, 400})
     render.surface_start(&surface)
     render.rect({100, 100, 200, 200}, {1.0, 0.0, 0.5})
     render.surface_end()
     for ! glfw.WindowShouldClose(window) {
         glfw.PollEvents()
-        gl.ClearColor(0.0, 0.0, 0.0, 1)
+        gl.ClearColor(0.0, 0.4, 0.4, 1)
         gl.Clear(gl.COLOR_BUFFER_BIT)
         offs := f32(0)
         for r in "Hello, world" {
@@ -109,6 +109,7 @@ test_window :: proc(t: ^testing.T) {
                 {100+offs, 100+0, 100+offs+char_size.x, 100+char_size.y},
                 char.rect,
                 texture,
+                {1.0, 1.0, 0.0},
             )
             offs += char_size.x + 10
         }

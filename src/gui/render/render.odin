@@ -57,10 +57,13 @@ font_shader: Shader(struct {
     sample_offset: Uniform(Vec),
     sample_size:   Uniform(Vec),
     our_texture:   Uniform(Texture),
+    color:         Uniform(Color),
 })
 
 
 init :: proc() {
+    gl.Enable(gl.BLEND)
+    gl.BlendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     init_static_buffer(&quad_data, []struct{pos: Vec} {
         { pos = { 0, 0 }, },
         { pos = { 1, 0 }, },
@@ -128,13 +131,14 @@ textured_rect_clip :: proc(bounds: Rect, clip: Rect, texture: Texture) {
     draw_buffer(textured_quad_data)
 }
 
-char :: proc(bounds: Rect, clip: Rect, atlas: Texture) {
+char :: proc(bounds: Rect, clip: Rect, atlas: Texture, color: Color) {
     shader_uniform(&font_shader.screen,        render_state.framebuffer_size)
     shader_uniform(&font_shader.scale,         rect_size(bounds))
     shader_uniform(&font_shader.position,      rect_position(bounds))
     shader_uniform(&font_shader.sample_size,   rect_size(clip))
     shader_uniform(&font_shader.sample_offset, rect_position(clip))
     shader_uniform(&font_shader.our_texture,   atlas)
+    shader_uniform(&font_shader.color,         color)
     shader_use(&font_shader)
     draw_buffer(textured_quad_data)
 }

@@ -9,7 +9,11 @@ Texture :: struct {
     id: u32,
 }
 
-texture_from_bitmap :: proc(bitmap: types.Bitmap, channels: int) -> Texture {
+texture_from_bitmap :: proc(
+    bitmap: types.Bitmap,
+    channels: int,
+    monochrome_alpha := false,
+) -> Texture {
     return texture_from_raw_bytes(
         bitmap.buffer, bitmap.size_x, bitmap.size_y, channels,
     )
@@ -28,7 +32,11 @@ texture_from_image_bytes :: proc(bytes: []u8) -> Texture {
 }
 
 texture_from_raw_bytes :: proc(
-    bytes: [^]u8, size_x: int, size_y: int, channels: int,
+    bytes: [^]u8,
+    size_x: int,
+    size_y: int,
+    channels: int,
+    monochrome_alpha := false,
 ) -> Texture {
     texture: u32
     gl.GenTextures(1, &texture)
@@ -63,7 +71,9 @@ texture_from_raw_bytes :: proc(
             bytes,
         )
     } else if channels == 1 {
-        swizzle_mask := [4]i32 {gl.RED, gl.RED, gl.RED, gl.ONE}
+        swizzle_mask := monochrome_alpha ? [
+            4]i32 {gl.RED, gl.RED, gl.RED, gl.ONE} :
+            [4]i32 {gl.ZERO, gl.ZERO, gl.ZERO, gl.RED}
         gl.TexParameteriv(
             gl.TEXTURE_2D,
             gl.TEXTURE_SWIZZLE_RGBA,
