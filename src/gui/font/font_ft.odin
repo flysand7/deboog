@@ -1,6 +1,6 @@
 package font
 
-import ft "shared:freetype"
+import ft "freetype"
 
 import "src:gui/types"
 
