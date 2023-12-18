@@ -154,7 +154,7 @@ Segment_Flags :: bit_set[enum {
     R = 2,
 }; u32]
 
-Elf32_Phdr :: struct {
+Phdr32 :: struct {
     type:   Segment_Type,
     offset: uint,
     vaddr:  uintptr,
@@ -165,7 +165,7 @@ Elf32_Phdr :: struct {
     align:  uint,
 }
 
-Elf_Phdr :: struct {
+Phdr :: struct {
     type:   Segment_Type,
     flags:  Segment_Flags,
     offset: uint,
@@ -176,7 +176,7 @@ Elf_Phdr :: struct {
     align:  uint,
 }
 
-Elf32_Sym :: struct {
+Sym32 :: struct {
     name:  u32,
     value: uintptr,
     size:  u32,
@@ -185,7 +185,7 @@ Elf32_Sym :: struct {
     shidx: u16,
 }
 
-Elf_Sym :: struct {
+Sym :: struct {
     name:  u32,
     info:  u8,
     other: u8,
