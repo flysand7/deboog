@@ -3,6 +3,7 @@ package elf
 import "core:fmt"
 import "core:os"
 import "core:testing"
+import "core:slice"
 
 expect   :: testing.expect
 expect_v :: testing.expect_value
@@ -22,13 +23,15 @@ test_elf_basic :: proc(t: ^testing.T) {
         expect_v(t, name_err, nil)
         fmt.println(name)
     }
-    symtab, symtab_i, symtab_err := section_by_name(elf, ".symtab")
-    strtab, strtab_i, strtab_err := section_by_name(elf, ".strtab")
-    expect_v(t, symtab_err, nil)
-    expect_v(t, strtab_err, nil)
-    symbols, symbols_err := section_data(elf, symtab, Elf_Sym)
-    expect_v(t, symbols_err, nil)
+    symbols := symbol_list(elf)
+    sym_names: [dynamic]string
     for symbol in symbols {
-        
+        name, name_err := symbol_name(elf, symbol)
+        expect_v(t, name_err, nil)
+        append(&sym_names, name)
+    }
+    slice.sort(sym_names[:])
+    for n in sym_names {
+        fmt.println(n)
     }
 }
