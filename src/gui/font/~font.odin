@@ -10,18 +10,16 @@ import "core:os"
 
 @(test, private)
 test_packing :: proc(t: ^testing.T) {
-    bitmap := types.make_bitmap(1024, 1024)
+    font, load_ok := load("/usr/share/fonts/noto/NotoSerif-Medium.ttf")
+    testing.expect(t, load_ok)
+    bitmap := types.make_bitmap(4096, 4096)
     mapping, mapping_ok := pack_rune_ranges(
         bitmap,
-        "/usr/share/fonts/noto/NotoSerif-Medium.ttf",
+        font,
         []Rune_Range {
-            { ' ',  '~' },          // ASCII
-            //{ '\u00a0', '\u00ff' }, // Latin-1 supplement
-            //{ '\u0100', '\u024f' }, // Latin-extended A and B
-            //{ '\u0370', '\u03ff' }, // Greek
-            //{ '\u0400', '\u04ff' }, // Cyrillic
+            { '\u0000',  '\U000e007f' },
         },
-        16,
+        9,
     )
     assert(mapping_ok)
     write_status := stbi.write_bmp("test/font.bmp",

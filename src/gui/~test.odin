@@ -80,18 +80,8 @@ test_window :: proc(t: ^testing.T) {
     render.tell_framebuffer_size({1280, 720})
     render.init()
     
-    bitmap := make_bitmap(1024, 1024)
     font.tell_monitor_dpi(get_monitor_dpi(glfw.GetPrimaryMonitor()))
-    mapping, packing_ok := font.pack_rune_ranges(
-        bitmap,
-        "/usr/share/fonts/noto/NotoSerif-Medium.ttf",
-        []font.Rune_Range {
-            {' ', '~'},
-        },
-        16,
-    )
-    assert(packing_ok)
-    texture := render.texture_from_bitmap(bitmap, 1, monochrome_alpha = true)
+    packed_font := render.make_packed_font("/usr/share/fonts/noto/NotoSerif-Medium.ttf", 16, 4096)
     surface := render.create_surface({400, 400})
     render.surface_start(&surface)
     render.rect({100, 100, 200, 200}, {1.0, 0.0, 0.5})
@@ -100,23 +90,7 @@ test_window :: proc(t: ^testing.T) {
         glfw.PollEvents()
         gl.ClearColor(0.0, 0.4, 0.4, 1)
         gl.Clear(gl.COLOR_BUFFER_BIT)
-        offs := f32(0)
-        for r in "Hello, world" {
-            char := mapping[r]
-            char_size := rect_size(char.rect)
-            char_size *= [2]f32 { f32(bitmap.size_x), f32(bitmap.size_y) }
-            char_pos := [2]f32 {
-                100+char.pos.x+offs,
-                100-char.pos.y-char_size.y,
-            }
-            render.char(
-                {char_pos.x, char_pos.y, char_pos.x + char_size.x, char_pos.y + char_size.y},
-                char.rect,
-                texture,
-                {1.0, 1.0, 0.0},
-            )
-            offs += char_size.x+5
-        }
+        render.str("Hello, world", {100, 100}, 1.0, {0.6, 0.5, 0.3}, packed_font)
         glfw.SwapBuffers(window)
     }
     glfw.Terminate()

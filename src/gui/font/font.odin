@@ -29,17 +29,12 @@ Rune_Range :: struct {
 }
 
 pack_rune_ranges :: proc(
-    bitmap:    types.Bitmap,
-    font_path: cstring,
-    ranges:    []Rune_Range,
+    bitmap: types.Bitmap,
+    font:   Font,
+    ranges: []Rune_Range,
             // pun indented
     po:int,
 ) -> (map[rune]Mapped_Glyph, bool) {
-    font, load_ok := load(font_path)
-    if ! load_ok {
-        return {}, false
-    }
-    defer _free(font)
     glyphs, glyphs_ok := glyphs(font, ranges, po)
     if ! glyphs_ok {
         return {}, false
