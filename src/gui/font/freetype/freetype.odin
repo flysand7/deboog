@@ -523,6 +523,12 @@ Vector :: struct {
     x, y : Pos,
 }
 
+Kerning_Mode :: enum u32 {
+    Default = 0,
+    Unfitted,
+    Unscaled,
+}
+
 @(default_calling_convention="c")
 foreign freetype {
     @(link_name="FT_Init_FreeType") init_free_type :: proc(library: ^Library) -> Error ---
@@ -538,4 +544,6 @@ foreign freetype {
     
     @(link_name="FT_Load_Glyph")   load_glyph :: proc(face: Face, index: c.uint, flags: Load_Flags) -> Error ---
     @(link_name="FT_Render_Glyph") render_glyph :: proc(slot: Glyph_Slot, render_mode: Render_Mode) -> Error ---
+    
+    @(link_name="FT_Get_Kerning") get_kerning :: proc(face: Face, left: u32, right: u32, mode: Kerning_Mode, vec: ^Vector) -> Error ---
 }
