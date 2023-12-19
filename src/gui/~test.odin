@@ -81,7 +81,7 @@ test_window :: proc(t: ^testing.T) {
     render.init()
     
     font.tell_monitor_dpi(get_monitor_dpi(glfw.GetPrimaryMonitor()))
-    packed_font := render.make_packed_font("/usr/share/fonts/noto/NotoSerif-Medium.ttf", 16, 4096)
+    packed_font := render.make_packed_font("/usr/share/fonts/noto/NotoSerif-Medium.ttf", 9, 4096)
     surface := render.create_surface({400, 400})
     render.surface_start(&surface)
     render.rect({100, 100, 200, 200}, {1.0, 0.0, 0.5})
@@ -90,7 +90,7 @@ test_window :: proc(t: ^testing.T) {
         glfw.PollEvents()
         gl.ClearColor(0.0, 0.4, 0.4, 1)
         gl.Clear(gl.COLOR_BUFFER_BIT)
-        render.str("Hello, world", {100, 100}, 1.0, {0.6, 0.5, 0.3}, packed_font)
+        render.str("I hate kerning", {100, 100}, 1.0, {0.9, 0.7, 0.6}, packed_font)
         glfw.SwapBuffers(window)
     }
     glfw.Terminate()

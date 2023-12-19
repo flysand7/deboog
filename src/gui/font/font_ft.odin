@@ -92,8 +92,8 @@ glyphs :: proc(font: Font, ranges: []Rune_Range, size_pt: int) -> (
 {
     size_error := ft.set_char_size(
         ft_face(font),
-        auto_cast (64*16),
-        auto_cast (64*16),
+        auto_cast (64*size_pt),
+        auto_cast (64*size_pt),
         auto_cast 300,
         auto_cast 300,
     )
@@ -103,7 +103,7 @@ glyphs :: proc(font: Font, ranges: []Rune_Range, size_pt: int) -> (
     glyphs := make([dynamic]Glyph, len(ranges))
     for range in ranges {
         for c in range.lo ..= range.hi {
-            glyph, glyph_ok := glyph(font, c, 16)
+            glyph, glyph_ok := glyph(font, c, size_pt)
             if glyph_ok {
                 append(&glyphs, glyph)
             } else {
