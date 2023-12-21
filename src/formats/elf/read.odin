@@ -81,3 +81,13 @@ symbol_name :: proc(elf: Elf_File, sym: Sym) -> (name: string, err: Read_Error) 
     }
     return cast(string) transmute(cstring) raw_data(elf.strtab[sym.name:]), nil
 }
+
+symbol_info :: proc(sym: Sym) -> (Sym_Type, Sym_Bind) {
+    type := transmute(Sym_Type) (sym.info & 0xf)
+    bind := transmute(Sym_Bind) (sym.info >> 4)
+    return type, bind
+}
+
+symbol_visibility :: proc(sym: Sym) -> Sym_Visibility {
+    return transmute(Sym_Visibility) (sym.other & 0x3)
+}

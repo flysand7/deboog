@@ -185,6 +185,32 @@ Sym32 :: struct {
     shidx: u16,
 }
 
+Sym_Bind :: enum u8 {
+    Local  = 0,
+    Global = 1,
+    Weak   = 2,
+}
+
+Sym_Type :: enum u8 {
+    Notype  = 0,
+    Object  = 1,
+    Func    = 2,
+    Section = 3,
+    File    = 4,
+    Common  = 5,
+    Tls     = 6,
+}
+
+Sym_Visibility :: enum u8 {
+    Default   = 0,
+    Internal  = 1,
+    Hidden    = 2,
+    Protected = 3,
+    Exported  = 4,
+    Singleton = 5,
+    Eliminate = 6,
+}
+
 Sym :: struct {
     name:  u32,
     info:  u8,
